@@ -31,7 +31,7 @@ export function LoginPage() {
         }}></div>
       </div>
 
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
@@ -54,7 +54,7 @@ export function LoginPage() {
               </div>
             </div>
           </motion.div>
-          
+
           <motion.div
             initial={{ x: -20, opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
@@ -106,7 +106,7 @@ export function LoginPage() {
           <div className="relative bg-white/[0.03] backdrop-blur-2xl border border-white/10 rounded-3xl p-10 shadow-2xl">
             {/* Gradient Overlay */}
             <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-indigo-500/5 rounded-3xl"></div>
-            
+
             <div className="relative z-10">
               <div className="mb-8">
                 <h2 className="text-3xl font-bold text-white mb-2">Secure Access</h2>
@@ -185,12 +185,12 @@ export function LoginPage() {
                     All access is logged and continuously monitored. Unauthorized access attempts will be prosecuted under applicable cyber security laws.
                   </p>
                 </div>
-                
+
                 <div className="text-center space-y-2">
                   <div className="text-xs text-slate-500 uppercase tracking-wide mb-3">OR</div>
                   <button
                     type="button"
-                    onClick={() => navigate('/citizen')}
+                    onClick={() => navigate('/citizen/login')}
                     className="w-full px-6 py-3 bg-gradient-to-r from-emerald-500/10 to-green-500/10 hover:from-emerald-500/20 hover:to-green-500/20 border border-emerald-500/30 text-emerald-400 rounded-xl font-semibold transition-all flex items-center justify-center gap-2"
                   >
                     <User className="w-4 h-4" />

@@ -11,6 +11,7 @@ import { AIChatbot } from "./pages/AIChatbot";
 import { NewspaperIntelligence } from "./pages/NewspaperIntelligence";
 import { DocumentSummarizer } from "./pages/DocumentSummarizer";
 import { FraudURLDetection } from "./pages/FraudURLDetection";
+import { CitizenLoginPage } from "./pages/citizen/CitizenLoginPage";
 
 // Citizen Portal
 import { CitizenPortalLayout } from "./components/CitizenPortalLayout";
@@ -42,6 +43,10 @@ export const router = createBrowserRouter([
       { path: "newspaper", Component: NewspaperIntelligence },
       { path: "documents", Component: DocumentSummarizer },
     ],
+  },
+  {
+    path: "/citizen/login",
+    Component: CitizenLoginPage,
   },
   // Citizen Portal Routes
   {
