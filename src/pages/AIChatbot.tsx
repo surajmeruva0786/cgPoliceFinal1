@@ -1,6 +1,8 @@
 import { motion } from 'motion/react';
 import { Send, Bot, User, Database, FileText, Newspaper } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 const initialMessages = [
   {
@@ -21,6 +23,7 @@ const exampleQueries = [
 export function AIChatbot() {
   const [messages, setMessages] = useState(initialMessages);
   const [input, setInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -29,33 +32,65 @@ export function AIChatbot() {
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [messages, isLoading]);
 
-  const handleSend = (e: React.FormEvent) => {
+  const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim()) return;
+    if (!input.trim() || isLoading) return;
+
+    const userText = input;
+    setInput(''); // Clear input immediately
 
     const newMessage = {
       id: messages.length + 1,
       type: 'user',
-      content: input,
+      content: userText,
       timestamp: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
     };
 
-    setMessages([...messages, newMessage]);
+    setMessages(prev => [...prev, newMessage]);
+    setIsLoading(true);
 
-    // Simulate bot response
-    setTimeout(() => {
+    try {
+      // Convert existing messages for the API context
+      // NOTE: We only send last 10 messages to keep context window manageable if needed, or all.
+      const history = messages.map(m => ({
+        role: m.type === 'bot' ? 'assistant' : 'user',
+        content: m.content
+      }));
+      // Add the new message
+      history.push({ role: 'user', content: userText });
+
+      const response = await fetch('http://localhost:8000/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: history })
+      });
+
+      if (!response.ok) throw new Error('Failed to get response');
+
+      const data = await response.json();
+
       const botResponse = {
         id: messages.length + 2,
         type: 'bot',
-        content: `I'm analyzing your query: "${input}". Here's what I found:\n\n• Total cases: 23\n• High priority: 7\n• Geographic concentration: Mumbai, Pune\n• Common pattern: Evening hours (6-10 PM)\n\nWould you like detailed reports on any specific cases?`,
+        content: data.response,
         timestamp: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
       };
       setMessages(prev => [...prev, botResponse]);
-    }, 1500);
 
-    setInput('');
+    } catch (error) {
+      console.error("Chat Error:", error);
+      const errorResponse = {
+        id: messages.length + 2,
+        type: 'bot',
+        content: "Sorry, I'm having trouble connecting to the AI server. Please make sure the backend is running.",
+        timestamp: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
+      };
+      setMessages(prev => [...prev, errorResponse]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleExampleClick = (query: string) => {
@@ -104,15 +139,51 @@ export function AIChatbot() {
                 </div>
                 <div className={`flex-1 ${message.type === 'user' ? 'flex justify-end' : ''}`}>
                   <div className={`max-w-[85%] rounded-xl p-3 ${message.type === 'bot'
-                      ? 'bg-[#0B1C2D] border border-[#2F80ED]/20'
-                      : 'bg-[#2F80ED]/20 border border-[#2F80ED]/30'
+                    ? 'bg-[#0B1C2D] border border-[#2F80ED]/20'
+                    : 'bg-[#2F80ED]/20 border border-[#2F80ED]/30'
                     }`}>
-                    <p className="text-sm text-[#F1F5F9] whitespace-pre-line">{message.content}</p>
+                    <div className="text-sm text-[#F1F5F9]">
+                      <ReactMarkdown
+                        remarkPlugins={[remarkGfm]}
+                        components={{
+                          p: ({ node, ...props }) => <p className="mb-2 last:mb-0" {...props} />,
+                          ul: ({ node, ...props }) => <ul className="list-disc ml-4 mb-2 space-y-1" {...props} />,
+                          ol: ({ node, ...props }) => <ol className="list-decimal ml-4 mb-2 space-y-1" {...props} />,
+                          li: ({ node, ...props }) => <li className="mb-0.5" {...props} />,
+                          h1: ({ node, ...props }) => <h1 className="text-lg font-bold mb-2" {...props} />,
+                          h2: ({ node, ...props }) => <h2 className="text-base font-bold mb-2" {...props} />,
+                          h3: ({ node, ...props }) => <h3 className="text-sm font-bold mb-1" {...props} />,
+                          strong: ({ node, ...props }) => <strong className="font-semibold text-white" {...props} />,
+                          a: ({ node, ...props }) => <a className="text-[#2F80ED] hover:underline" target="_blank" rel="noopener noreferrer" {...props} />,
+                          blockquote: ({ node, ...props }) => <blockquote className="border-l-2 border-[#2F80ED] pl-3 italic my-2 text-slate-300" {...props} />,
+                        }}
+                      >
+                        {message.content}
+                      </ReactMarkdown>
+                    </div>
                     <div className="text-xs text-[#94A3B8] mt-1">{message.timestamp}</div>
                   </div>
                 </div>
               </motion.div>
             ))}
+            {isLoading && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex gap-3"
+              >
+                <div className="w-8 h-8 rounded-full bg-[#2F80ED]/20 flex items-center justify-center flex-shrink-0">
+                  <Bot className="w-4 h-4 text-[#2F80ED]" />
+                </div>
+                <div className="bg-[#0B1C2D] border border-[#2F80ED]/20 rounded-xl p-3">
+                  <div className="flex space-x-2">
+                    <div className="w-2 h-2 bg-[#2F80ED] rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                    <div className="w-2 h-2 bg-[#2F80ED] rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                    <div className="w-2 h-2 bg-[#2F80ED] rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                  </div>
+                </div>
+              </motion.div>
+            )}
             <div ref={messagesEndRef} />
           </div>
 

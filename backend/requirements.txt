@@ -7,3 +7,8 @@ facenet-pytorch
 opencv-python
 numpy
 Pillow
+requests
+beautifulsoup4
+lxml
+pytesseract
+ollama

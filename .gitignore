@@ -3,3 +3,4 @@ backend/weights
 backend/venv
 backend/uploads
 backend/__pycache__
+.env

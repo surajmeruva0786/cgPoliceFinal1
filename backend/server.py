@@ -60,6 +60,7 @@ async def detect_deepfake(file: UploadFile = File(...)):
             "details": "Processed successfully"
         }
 
+
     except Exception as e:
         import traceback
         traceback.print_exc()
@@ -72,6 +73,62 @@ async def detect_deepfake(file: UploadFile = File(...)):
                 os.remove(file_path)
             except:
                 pass
+
+# Import new modules
+from document_analysis import process_document
+from news_intelligence import get_news_intel
+from chatbot import get_chat_response
+from pydantic import BaseModel
+from typing import List, Dict
+
+class ChatRequest(BaseModel):
+    messages: List[Dict[str, str]]
+
+@app.post("/chat")
+async def chat_endpoint(request: ChatRequest):
+    try:
+        response = get_chat_response(request.messages)
+        return {"response": response}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/analyze-document")
+async def analyze_document_endpoint(file: UploadFile = File(...)):
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="No file uploaded")
+        
+    # Generate unique filename
+    file_extension = os.path.splitext(file.filename)[1]
+    unique_filename = f"{uuid.uuid4()}{file_extension}"
+    file_path = os.path.join(UPLOAD_DIR, unique_filename)
+    
+    try:
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+            
+        # Process interface
+        # Note: This runs synchronously and might block. In production, use background tasks.
+        result = process_document(file_path)
+        return result
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if os.path.exists(file_path):
+            try:
+                os.remove(file_path)
+            except:
+                pass
+
+@app.get("/news-intel")
+async def news_intelligence_endpoint():
+    try:
+        return get_news_intel()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 if __name__ == "__main__":
     import uvicorn
