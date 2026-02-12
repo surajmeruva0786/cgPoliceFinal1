@@ -1,2 +1,5 @@
 node_modules
-weights
+backend/weights
+backend/venv
+backend/uploads
+backend/__pycache__

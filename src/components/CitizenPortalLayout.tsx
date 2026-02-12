@@ -1,5 +1,5 @@
 import { Outlet, useNavigate, useLocation } from 'react-router';
-import { Shield, Home, Search, Video, UserCheck, AlertTriangle, BookOpen, User } from 'lucide-react';
+import { Shield, Home, Search, Video, UserCheck, AlertTriangle, BookOpen, User, Bell, Bot } from 'lucide-react';
 import { motion } from 'motion/react';
 
 const navItems = [
@@ -8,6 +8,8 @@ const navItems = [
   { path: '/citizen/deepfake-detector', label: 'Deepfake Detector', icon: Video },
   { path: '/citizen/verify-official', label: 'Verify Official', icon: UserCheck },
   { path: '/citizen/report-fraud', label: 'Report Fraud', icon: AlertTriangle },
+  { path: '/citizen/alerts', label: 'Live Alerts', icon: Bell },
+  { path: '/citizen/ai-assistant', label: 'AI Assistant', icon: Bot },
   { path: '/citizen/protection-tips', label: 'Protection Tips', icon: BookOpen },
 ];
 
@@ -63,16 +65,15 @@ export function CitizenPortalLayout() {
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = location.pathname === item.path;
-              
+
               return (
                 <motion.button
                   key={item.path}
                   onClick={() => navigate(item.path)}
-                  className={`relative flex items-center gap-2 px-4 py-2.5 rounded-lg transition-all duration-300 ${
-                    isActive 
-                      ? 'bg-white/10 text-white shadow-lg backdrop-blur-sm' 
-                      : 'text-slate-400 hover:text-white hover:bg-white/5'
-                  }`}
+                  className={`relative flex items-center gap-2 px-4 py-2.5 rounded-lg transition-all duration-300 ${isActive
+                    ? 'bg-white/10 text-white shadow-lg backdrop-blur-sm'
+                    : 'text-slate-400 hover:text-white hover:bg-white/5'
+                    }`}
                   whileHover={{ y: -2 }}
                   whileTap={{ scale: 0.98 }}
                 >

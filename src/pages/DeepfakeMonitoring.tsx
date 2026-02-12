@@ -1,8 +1,9 @@
 import { motion } from 'motion/react';
 import { Video, AlertTriangle, CheckCircle, XCircle, Flag, Bell, Save, Activity } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
-const analysisData = {
+// Default initial state
+const initialData = {
   lipSyncMismatch: 'Medium',
   facialDistortion: 'Detected',
   identityVerification: 'Failed',
@@ -11,11 +12,35 @@ const analysisData = {
 };
 
 export function DeepfakeMonitoring() {
-  const [status] = useState(analysisData.status);
-  const [confidence] = useState(analysisData.confidence);
+  const [data, setData] = useState(initialData);
+  const [alerts, setAlerts] = useState<any[]>([]);
+
+  useEffect(() => {
+    // Poll localStorage for new alerts from citizen portal
+    const checkAlerts = () => {
+      const storedAlerts = JSON.parse(localStorage.getItem('deepfake_alerts') || '[]');
+      if (storedAlerts.length > 0) {
+        setAlerts(storedAlerts);
+        // Use the most recent alert for main display
+        const latest = storedAlerts[0];
+        setData(prev => ({
+          ...prev,
+          status: latest.status,
+          confidence: Math.round(latest.confidence * 100),
+          // Simulate other metrics based on prediction
+          facialDistortion: latest.prediction === 'FAKE' ? 'Detected' : 'Normal',
+          identityVerification: latest.prediction === 'FAKE' ? 'Failed' : 'Verified',
+        }));
+      }
+    };
+
+    checkAlerts();
+    const interval = setInterval(checkAlerts, 2000); // Check every 2 seconds
+    return () => clearInterval(interval);
+  }, []);
 
   const getStatusConfig = () => {
-    switch (status) {
+    switch (data.status) {
       case 'real':
         return {
           label: 'Likely Real',
@@ -36,6 +61,13 @@ export function DeepfakeMonitoring() {
           color: '#ef4444',
           icon: XCircle,
           bg: 'from-red-500/20 to-pink-500/20'
+        };
+      default:
+        return {
+          label: 'Unknown',
+          color: '#cbd5e1',
+          icon: Activity,
+          bg: 'from-slate-500/20 to-gray-500/20'
         };
     }
   };
@@ -58,7 +90,7 @@ export function DeepfakeMonitoring() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Video Preview Section */}
+        {/* Left Column: Video Preview & Confidence */}
         <motion.div
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
@@ -81,7 +113,7 @@ export function DeepfakeMonitoring() {
 
               {/* Status Badge */}
               <div className="flex items-center gap-3">
-                <div 
+                <div
                   className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold bg-gradient-to-r ${statusConfig.bg} border backdrop-blur-sm shadow-lg`}
                   style={{ borderColor: `${statusConfig.color}40` }}
                 >
@@ -89,7 +121,7 @@ export function DeepfakeMonitoring() {
                   <span style={{ color: statusConfig.color }}>{statusConfig.label}</span>
                 </div>
                 <div className="text-sm text-slate-400">
-                  Confidence: <span className="text-white font-bold text-lg ml-1">{confidence}%</span>
+                  Confidence: <span className="text-white font-bold text-lg ml-1">{data.confidence}%</span>
                 </div>
               </div>
             </div>
@@ -103,20 +135,20 @@ export function DeepfakeMonitoring() {
               <div className="space-y-4">
                 <div className="flex justify-between text-sm mb-3">
                   <span className="text-slate-400 font-medium">Manipulation Probability</span>
-                  <span className="text-white font-bold text-base">{confidence}%</span>
+                  <span className="text-white font-bold text-base">{data.confidence}%</span>
                 </div>
                 <div className="relative h-4 bg-white/5 rounded-full overflow-hidden border border-white/10">
                   <motion.div
                     initial={{ width: 0 }}
-                    animate={{ width: `${confidence}%` }}
+                    animate={{ width: `${data.confidence}%` }}
                     transition={{ duration: 1.5, delay: 0.3, ease: "easeOut" }}
                     className="h-full rounded-full relative overflow-hidden"
                     style={{
-                      background: confidence > 70 
-                        ? 'linear-gradient(90deg, #ef4444, #dc2626)' 
-                        : confidence > 40 
-                        ? 'linear-gradient(90deg, #f59e0b, #d97706)' 
-                        : 'linear-gradient(90deg, #10b981, #059669)'
+                      background: data.confidence > 70
+                        ? 'linear-gradient(90deg, #ef4444, #dc2626)'
+                        : data.confidence > 40
+                          ? 'linear-gradient(90deg, #f59e0b, #d97706)'
+                          : 'linear-gradient(90deg, #10b981, #059669)'
                     }}
                   >
                     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-pulse"></div>
@@ -157,7 +189,7 @@ export function DeepfakeMonitoring() {
           </div>
         </motion.div>
 
-        {/* AI Reasoning Panel */}
+        {/* Right Column: Reasoning & Analysis */}
         <motion.div
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
@@ -168,7 +200,7 @@ export function DeepfakeMonitoring() {
             <div className="absolute inset-0 bg-gradient-to-br from-amber-500/10 to-orange-500/10 rounded-2xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
             <div className="relative bg-white/[0.02] backdrop-blur-xl border border-white/10 rounded-2xl p-6 shadow-xl">
               <h3 className="text-xl font-bold text-white mb-6">Forensic Analysis</h3>
-              
+
               <div className="space-y-4">
                 {/* Analysis Item */}
                 <div className="p-4 bg-gradient-to-br from-amber-500/5 to-orange-500/5 rounded-xl border border-amber-500/20 backdrop-blur-sm">
@@ -234,32 +266,27 @@ export function DeepfakeMonitoring() {
             </div>
           </div>
 
-          {/* Technical Details */}
+          {/* Recent Alerts List */}
           <div className="relative group">
             <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 to-purple-500/10 rounded-2xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
             <div className="relative bg-white/[0.02] backdrop-blur-xl border border-white/10 rounded-2xl p-6 shadow-xl">
-              <h3 className="text-lg font-bold text-white mb-4">System Metrics</h3>
-              <div className="space-y-3 text-sm">
-                <div className="flex justify-between items-center py-2 border-b border-white/5">
-                  <span className="text-slate-400">Detection Model</span>
-                  <span className="text-white font-semibold">DeepGuard AI v4.2</span>
-                </div>
-                <div className="flex justify-between items-center py-2 border-b border-white/5">
-                  <span className="text-slate-400">Processing Time</span>
-                  <span className="text-emerald-400 font-semibold">2.3 seconds</span>
-                </div>
-                <div className="flex justify-between items-center py-2 border-b border-white/5">
-                  <span className="text-slate-400">Frame Rate</span>
-                  <span className="text-white font-semibold">30 FPS</span>
-                </div>
-                <div className="flex justify-between items-center py-2 border-b border-white/5">
-                  <span className="text-slate-400">Resolution</span>
-                  <span className="text-white font-semibold">1920×1080</span>
-                </div>
-                <div className="flex justify-between items-center py-2">
-                  <span className="text-slate-400">Source Type</span>
-                  <span className="text-blue-400 font-semibold">Video Call Recording</span>
-                </div>
+              <h3 className="text-lg font-bold text-white mb-4">Recent Citizen Uploads</h3>
+              <div className="space-y-3 max-h-40 overflow-y-auto custom-scrollbar">
+                {alerts.length === 0 ? (
+                  <p className="text-slate-400 text-sm">No recent uploads.</p>
+                ) : (
+                  alerts.map((alert) => (
+                    <div key={alert.id} className="flex justify-between items-center py-2 border-b border-white/5 last:border-0">
+                      <div>
+                        <div className="text-white text-sm font-medium truncate w-48" title={alert.filename}>{alert.filename}</div>
+                        <div className="text-xs text-slate-500">{new Date(alert.timestamp).toLocaleTimeString()}</div>
+                      </div>
+                      <div className={`text-xs font-bold px-2 py-1 rounded-full ${alert.prediction === 'FAKE' ? 'bg-red-500/20 text-red-400' : 'bg-green-500/20 text-green-400'}`}>
+                        {alert.prediction} ({(alert.confidence * 100).toFixed(0)}%)
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           </div>

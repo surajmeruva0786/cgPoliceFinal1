@@ -21,6 +21,8 @@ import { CitizenDeepfakeDetector } from "./pages/citizen/CitizenDeepfakeDetector
 import { CitizenIdentityVerifier } from "./pages/citizen/CitizenIdentityVerifier";
 import { CitizenReportFraud } from "./pages/citizen/CitizenReportFraud";
 import { CitizenProtectionTips } from "./pages/citizen/CitizenProtectionTips";
+import { CitizenLiveAlerts } from "./pages/citizen/CitizenLiveAlerts";
+import { CitizenAIAssistant } from "./pages/citizen/CitizenAIAssistant";
 
 export const router = createBrowserRouter([
   {
@@ -59,6 +61,8 @@ export const router = createBrowserRouter([
       { path: "verify-official", Component: CitizenIdentityVerifier },
       { path: "report-fraud", Component: CitizenReportFraud },
       { path: "protection-tips", Component: CitizenProtectionTips },
+      { path: "alerts", Component: CitizenLiveAlerts },
+      { path: "ai-assistant", Component: CitizenAIAssistant },
     ],
   },
 ]);
