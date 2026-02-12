@@ -7,21 +7,42 @@ export function CitizenURLChecker() {
   const [result, setResult] = useState<any>(null);
   const [isChecking, setIsChecking] = useState(false);
 
-  const handleCheck = (e: React.FormEvent) => {
+  const handleCheck = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!url) return;
     setIsChecking(true);
+    setResult(null);
 
-    // Simulate API call
-    setTimeout(() => {
-      const isSafe = Math.random() > 0.3;
-      setResult({
-        safe: isSafe,
-        confidence: isSafe ? 98 : 94,
-        threats: isSafe ? [] : ['Phishing attempt detected', 'Domain recently registered', 'SSL certificate suspicious'],
-        category: isSafe ? 'Legitimate Website' : 'Banking Fraud Attempt'
+    try {
+      const response = await fetch('http://localhost:8000/check-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: url }),
       });
+
+      const data = await response.json();
+
+      if (data.status === 'UNSAFE') {
+        setResult({
+          safe: false,
+          confidence: 100,
+          threats: data.threats.map((t: any) => `${t.threatType} on ${t.platformType}`),
+          category: data.threats[0]?.threatType || 'Potential Security Threat'
+        });
+      } else if (data.status === 'SAFE') {
+        setResult({
+          safe: true,
+          confidence: 100,
+          threats: [],
+          category: 'Legitimate Website'
+        });
+      }
+
+    } catch (error) {
+      console.error("Fetch error:", error);
+    } finally {
       setIsChecking(false);
-    }, 2000);
+    }
   };
 
   return (
@@ -85,11 +106,10 @@ export function CitizenURLChecker() {
           <div className="relative bg-white/[0.02] backdrop-blur-xl border border-white/10 rounded-2xl p-8 shadow-xl">
             <div className="flex items-start justify-between mb-6">
               <h3 className="text-2xl font-bold text-white">Safety Report</h3>
-              <div className={`flex items-center gap-2 px-4 py-2 rounded-lg border font-bold ${
-                result.safe
+              <div className={`flex items-center gap-2 px-4 py-2 rounded-lg border font-bold ${result.safe
                   ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
                   : 'bg-red-500/20 text-red-400 border-red-500/30'
-              }`}>
+                }`}>
                 {result.safe ? <CheckCircle className="w-5 h-5" /> : <XCircle className="w-5 h-5" />}
                 {result.safe ? 'SAFE' : 'DANGEROUS'}
               </div>

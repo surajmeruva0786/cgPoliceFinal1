@@ -54,26 +54,49 @@ export function FraudURLDetection() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [activeTab, setActiveTab] = useState<'url' | 'message'>('url');
 
-  const handleAnalyze = () => {
+  const handleAnalyze = async () => {
+    if (!inputValue) return;
     setIsAnalyzing(true);
-    
-    // Simulate analysis
-    setTimeout(() => {
-      setAnalysisResult({
-        status: 'malicious',
-        confidence: 94,
-        threats: [
-          'Phishing attempt detected',
-          'Domain registered recently (2 days ago)',
-          'SSL certificate invalid',
-          'Mimics official government website',
-          'Reported by 347 users'
-        ],
-        recommendation: 'BLOCK IMMEDIATELY',
-        category: 'Banking Fraud'
+    setAnalysisResult(null);
+
+    try {
+      const response = await fetch('http://localhost:8000/check-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: inputValue }),
       });
+
+      const data = await response.json();
+
+      if (data.status === 'UNSAFE') {
+        setAnalysisResult({
+          status: 'malicious',
+          confidence: 100, // Safe Browsing is deterministic
+          threats: data.threats.map((t: any) => `${t.threatType} on ${t.platformType}`),
+          recommendation: 'BLOCK IMMEDIATELY',
+          category: data.threats[0]?.threatType || 'Unknown Threat'
+        });
+      } else if (data.status === 'SAFE') {
+        // For safe URLs, we might not show the full malicious UI, but let's adapt it to show "Safe"
+        // The current UI seems built for "Analysis Result" which implies finding something. 
+        // Let's set a "safe" result state.
+        setAnalysisResult({
+          status: 'safe',
+          confidence: 100,
+          threats: [],
+          recommendation: 'SAFE TO VISIT',
+          category: 'Verified Safe'
+        });
+      } else {
+        // Error
+        console.error("API Error:", data.details);
+      }
+
+    } catch (error) {
+      console.error("Fetch error:", error);
+    } finally {
       setIsAnalyzing(false);
-    }, 2000);
+    }
   };
 
   return (
@@ -125,27 +148,25 @@ export function FraudURLDetection() {
             <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-indigo-500/10 rounded-2xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
             <div className="relative bg-white/[0.02] backdrop-blur-xl border border-white/10 rounded-2xl p-6 shadow-xl">
               <h3 className="text-xl font-bold text-white mb-4">Analyze URL or Message</h3>
-              
+
               {/* Tab Switcher */}
               <div className="flex gap-2 mb-4">
                 <button
                   onClick={() => setActiveTab('url')}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
-                    activeTab === 'url'
-                      ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
-                      : 'bg-white/5 text-slate-400 border border-white/10 hover:text-white'
-                  }`}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${activeTab === 'url'
+                    ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
+                    : 'bg-white/5 text-slate-400 border border-white/10 hover:text-white'
+                    }`}
                 >
                   <Link className="w-4 h-4" />
                   URL Analysis
                 </button>
                 <button
                   onClick={() => setActiveTab('message')}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
-                    activeTab === 'message'
-                      ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
-                      : 'bg-white/5 text-slate-400 border border-white/10 hover:text-white'
-                  }`}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${activeTab === 'message'
+                    ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
+                    : 'bg-white/5 text-slate-400 border border-white/10 hover:text-white'
+                    }`}
                 >
                   <MessageSquare className="w-4 h-4" />
                   Message Analysis
@@ -201,14 +222,20 @@ export function FraudURLDetection() {
               <div className="relative bg-white/[0.02] backdrop-blur-xl border border-white/10 rounded-2xl p-6 shadow-xl">
                 <div className="flex items-start justify-between mb-6">
                   <h3 className="text-xl font-bold text-white">Analysis Result</h3>
-                  <div className="flex items-center gap-2 px-4 py-2 bg-red-500/20 text-red-400 rounded-lg border border-red-500/30 font-bold">
-                    <XCircle className="w-5 h-5" />
-                    MALICIOUS
+                  <div className={`flex items-center gap-2 px-4 py-2 rounded-lg border font-bold ${analysisResult.status === 'malicious'
+                    ? 'bg-red-500/20 text-red-400 border-red-500/30'
+                    : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+                    }`}>
+                    {analysisResult.status === 'malicious' ? <XCircle className="w-5 h-5" /> : <CheckCircle className="w-5 h-5" />}
+                    {analysisResult.status === 'malicious' ? 'MALICIOUS' : 'SAFE'}
                   </div>
                 </div>
 
                 <div className="space-y-4">
-                  <div className="p-4 bg-gradient-to-br from-red-500/10 to-pink-500/10 rounded-xl border border-red-500/20">
+                  <div className={`p-4 rounded-xl border ${analysisResult.status === 'malicious'
+                    ? 'bg-gradient-to-br from-red-500/10 to-pink-500/10 border-red-500/20'
+                    : 'bg-gradient-to-br from-emerald-500/10 to-green-500/10 border-emerald-500/20'
+                    }`}>
                     <div className="flex items-center justify-between mb-3">
                       <span className="text-sm font-semibold text-white">Threat Confidence</span>
                       <span className="text-red-400 font-bold text-lg">{analysisResult.confidence}%</span>
@@ -218,42 +245,46 @@ export function FraudURLDetection() {
                         initial={{ width: 0 }}
                         animate={{ width: `${analysisResult.confidence}%` }}
                         transition={{ duration: 1, delay: 0.3 }}
-                        className="h-full bg-gradient-to-r from-red-500 to-pink-500"
+                        className={`h-full ${analysisResult.status === 'malicious' ? 'bg-gradient-to-r from-red-500 to-pink-500' : 'bg-gradient-to-r from-emerald-500 to-green-500'}`}
                       />
                     </div>
                   </div>
 
-                  <div>
-                    <div className="text-sm font-semibold text-white mb-3">Detected Threats:</div>
-                    <div className="space-y-2">
-                      {analysisResult.threats.map((threat: string, index: number) => (
-                        <div key={index} className="flex items-start gap-2 text-sm text-slate-300 bg-white/5 rounded-lg p-3 border border-white/10">
-                          <AlertTriangle className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
-                          <span>{threat}</span>
-                        </div>
-                      ))}
+                  {analysisResult.status === 'malicious' && (
+                    <div>
+                      <div className="text-sm font-semibold text-white mb-3">Detected Threats:</div>
+                      <div className="space-y-2">
+                        {analysisResult.threats.map((threat: string, index: number) => (
+                          <div key={index} className="flex items-start gap-2 text-sm text-slate-300 bg-white/5 rounded-lg p-3 border border-white/10">
+                            <AlertTriangle className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
+                            <span>{threat}</span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="p-4 bg-white/5 rounded-xl border border-white/10">
                       <div className="text-xs text-slate-400 mb-1">Category</div>
                       <div className="text-white font-semibold">{analysisResult.category}</div>
                     </div>
-                    <div className="p-4 bg-red-500/10 rounded-xl border border-red-500/20">
-                      <div className="text-xs text-red-400 mb-1">Recommendation</div>
-                      <div className="text-red-400 font-bold">{analysisResult.recommendation}</div>
+                    <div className={`p-4 rounded-xl border ${analysisResult.status === 'malicious' ? 'bg-red-500/10 border-red-500/20' : 'bg-emerald-500/10 border-emerald-500/20'}`}>
+                      <div className={`text-xs mb-1 ${analysisResult.status === 'malicious' ? 'text-red-400' : 'text-emerald-400'}`}>Recommendation</div>
+                      <div className={`${analysisResult.status === 'malicious' ? 'text-red-400' : 'text-emerald-400'} font-bold`}>{analysisResult.recommendation}</div>
                     </div>
                   </div>
 
-                  <div className="flex gap-3 pt-4">
-                    <button className="flex-1 px-4 py-3 bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 text-red-400 rounded-lg font-medium transition-all">
-                      Block URL
-                    </button>
-                    <button className="flex-1 px-4 py-3 bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 text-blue-400 rounded-lg font-medium transition-all">
-                      Generate Report
-                    </button>
-                  </div>
+                  {analysisResult.status === 'malicious' && (
+                    <div className="flex gap-3 pt-4">
+                      <button className="flex-1 px-4 py-3 bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 text-red-400 rounded-lg font-medium transition-all">
+                        Block URL
+                      </button>
+                      <button className="flex-1 px-4 py-3 bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 text-blue-400 rounded-lg font-medium transition-all">
+                        Generate Report
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             </motion.div>
@@ -284,11 +315,10 @@ export function FraudURLDetection() {
                   className="p-4 bg-white/5 rounded-xl border border-white/10 hover:border-white/20 transition-all"
                 >
                   <div className="flex items-start justify-between mb-2">
-                    <div className={`px-2 py-1 rounded text-xs font-bold ${
-                      detection.status === 'malicious'
-                        ? 'bg-red-500/20 text-red-400 border border-red-500/30'
-                        : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
-                    }`}>
+                    <div className={`px-2 py-1 rounded text-xs font-bold ${detection.status === 'malicious'
+                      ? 'bg-red-500/20 text-red-400 border border-red-500/30'
+                      : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                      }`}>
                       {detection.status.toUpperCase()}
                     </div>
                     <span className="text-xs text-slate-500">{detection.timestamp}</span>

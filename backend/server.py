@@ -2,8 +2,23 @@ from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import shutil
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
 import uuid
-from deepfake_detector import DeepfakeDetector
+try:
+    from deepfake_detector import DeepfakeDetector
+except ImportError as e:
+    print(f"Warning: Could not import DeepfakeDetector: {e}")
+    DeepfakeDetector = None
+    
+from document_analysis import process_document
+from news_intelligence import get_news_intel
+from chatbot import get_chat_response
+from url_detector import check_url_safety
+from pydantic import BaseModel
+from typing import List, Dict
 
 app = FastAPI()
 
@@ -15,6 +30,14 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+class URLCheckRequest(BaseModel):
+    url: str
+
+@app.post("/check-url")
+async def api_check_url(request: URLCheckRequest):
+    result = check_url_safety(request.url)
+    return result
 
 # Initialize detector
 # Ensure you have 'weights' directory with model files
