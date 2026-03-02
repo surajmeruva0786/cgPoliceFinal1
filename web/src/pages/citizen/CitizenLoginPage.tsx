@@ -35,10 +35,10 @@ export function CitizenLoginPage() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6 }}
-                className="w-full max-w-6xl mx-8 grid md:grid-cols-2 gap-16 items-center relative z-10"
+                className="w-full max-w-6xl mx-4 sm:mx-8 grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-16 items-center relative z-10"
             >
-                {/* Left Side - Branding */}
-                <div className="text-left space-y-8">
+                {/* Left Side - Branding (hidden on mobile) */}
+                <div className="hidden md:block text-left space-y-8">
                     <motion.div
                         initial={{ scale: 0.8, opacity: 0 }}
                         animate={{ scale: 1, opacity: 1 }}
@@ -103,13 +103,13 @@ export function CitizenLoginPage() {
                     className="relative"
                 >
                     {/* Glassy Card */}
-                    <div className="relative bg-white/[0.03] backdrop-blur-2xl border border-white/10 rounded-3xl p-10 shadow-2xl">
+                    <div className="relative bg-white/[0.03] backdrop-blur-2xl border border-white/10 rounded-2xl sm:rounded-3xl p-6 sm:p-10 shadow-2xl">
                         {/* Gradient Overlay */}
                         <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 via-transparent to-teal-500/5 rounded-3xl"></div>
 
                         <div className="relative z-10">
-                            <div className="mb-8">
-                                <h2 className="text-3xl font-bold text-white mb-2">Citizen Login</h2>
+                            <div className="mb-6 sm:mb-8">
+                                <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2">Citizen Login</h2>
                                 <p className="text-sm text-slate-400">Enter your details to access the portal</p>
                             </div>
 

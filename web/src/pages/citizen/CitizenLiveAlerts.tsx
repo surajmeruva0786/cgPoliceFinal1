@@ -60,7 +60,7 @@ const alerts = [
 
 export function CitizenLiveAlerts() {
     return (
-        <div className="p-8 space-y-8">
+        <div className="p-4 sm:p-8 space-y-4 sm:space-y-8">
             {/* Header */}
             <div>
                 <h2 className="text-3xl font-bold text-[#F1F5F9] mb-2">Live Fraud Alerts</h2>

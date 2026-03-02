@@ -118,11 +118,11 @@ export function CitizenAIAssistant() {
           - Used flex-col and h-full to fill available space in the parent container.
           - Adjusted padding.
         */
-        <div className="p-6 h-[calc(100vh-8rem)] flex flex-col">
+        <div className="p-3 sm:p-6 h-[calc(100vh-8rem)] flex flex-col">
             {/* Header */}
             <div className="mb-4 flex-shrink-0">
-                <h2 className="text-2xl font-bold text-[#F1F5F9] mb-1">AI Intelligence Assistant</h2>
-                <p className="text-sm text-[#94A3B8]">Query databases, analyze patterns, and get instant insights</p>
+                <h2 className="text-lg sm:text-2xl font-bold text-[#F1F5F9] mb-1">AI Intelligence Assistant</h2>
+                <p className="text-xs sm:text-sm text-[#94A3B8]">Query databases, analyze patterns, and get instant insights</p>
             </div>
 
             <div className="flex-1 grid grid-cols-1 lg:grid-cols-4 gap-6 min-h-0">
@@ -222,12 +222,12 @@ export function CitizenAIAssistant() {
                     </div>
                 </motion.div>
 
-                {/* Context Sources Panel */}
+                {/* Context Sources Panel — hidden on mobile */}
                 <motion.div
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ duration: 0.5, delay: 0.2 }}
-                    className="space-y-4 overflow-y-auto custom-scrollbar"
+                    className="hidden lg:block space-y-4 overflow-y-auto custom-scrollbar"
                 >
                     {/* Example Queries */}
                     <div className="bg-[#12283A] border border-[#2F80ED]/20 rounded-xl p-4">

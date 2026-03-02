@@ -11,7 +11,7 @@ export function CitizenIdentityVerifier() {
   };
 
   return (
-    <div className="p-8 space-y-6 max-w-4xl mx-auto">
+    <div className="p-4 sm:p-8 space-y-4 sm:space-y-6 max-w-4xl mx-auto">
       <div>
         <h2 className="text-4xl font-bold text-white mb-2">Verify Police Officer</h2>
         <p className="text-slate-400">Check if the officer contacting you is genuine</p>

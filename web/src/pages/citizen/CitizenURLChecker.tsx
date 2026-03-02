@@ -46,7 +46,7 @@ export function CitizenURLChecker() {
   };
 
   return (
-    <div className="p-8 space-y-6 max-w-4xl mx-auto">
+    <div className="p-4 sm:p-8 space-y-4 sm:space-y-6 max-w-4xl mx-auto">
       <div>
         <h2 className="text-4xl font-bold text-white mb-2">URL Safety Checker</h2>
         <p className="text-slate-400">Check if a website or link is safe before visiting</p>
@@ -107,8 +107,8 @@ export function CitizenURLChecker() {
             <div className="flex items-start justify-between mb-6">
               <h3 className="text-2xl font-bold text-white">Safety Report</h3>
               <div className={`flex items-center gap-2 px-4 py-2 rounded-lg border font-bold ${result.safe
-                  ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
-                  : 'bg-red-500/20 text-red-400 border-red-500/30'
+                ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+                : 'bg-red-500/20 text-red-400 border-red-500/30'
                 }`}>
                 {result.safe ? <CheckCircle className="w-5 h-5" /> : <XCircle className="w-5 h-5" />}
                 {result.safe ? 'SAFE' : 'DANGEROUS'}
