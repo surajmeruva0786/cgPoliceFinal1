@@ -12,7 +12,8 @@ const WEB_APP_URL = 'http://192.168.0.102:3000/citizen/login';
 export default function App() {
   const webViewRef = useRef(null);
   const [canGoBack, setCanGoBack] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  // Show splash only until the very first page load completes
+  const [initialLoadDone, setInitialLoadDone] = useState(false);
 
   // Android back button → WebView back
   useEffect(() => {
@@ -58,8 +59,10 @@ export default function App() {
         source={{ uri: WEB_APP_URL }}
         style={styles.webview}
         onNavigationStateChange={(navState) => setCanGoBack(navState.canGoBack)}
-        onLoadStart={() => setIsLoading(true)}
-        onLoadEnd={() => setIsLoading(false)}
+        // Only dismiss the splash after the first page finishes loading
+        onLoadEnd={() => {
+          if (!initialLoadDone) setInitialLoadDone(true);
+        }}
         javaScriptEnabled={true}
         domStorageEnabled={true}
         allowsInlineMediaPlayback={true}
@@ -68,17 +71,19 @@ export default function App() {
         overScrollMode="never"
         showsVerticalScrollIndicator={false}
         allowsFullscreenVideo={true}
+        // Allow mixed content for dev
+        mixedContentMode="always"
       />
 
-      {/* Loading overlay */}
-      {isLoading && (
+      {/* Splash screen — only shown until first load completes */}
+      {!initialLoadDone && (
         <View style={styles.loadingOverlay}>
           <View style={styles.loadingLogo}>
             <Ionicons name="shield-checkmark" size={48} color="#34d399" />
           </View>
           <Text style={styles.loadingTitle}>Citizen Protection Portal</Text>
           <ActivityIndicator size="small" color="#34d399" style={{ marginTop: 16 }} />
-          <Text style={styles.loadingText}>Loading...</Text>
+          <Text style={styles.loadingText}>Connecting to server...</Text>
         </View>
       )}
     </SafeAreaView>
