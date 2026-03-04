@@ -88,15 +88,15 @@ export function CitizenDashboard() {
   ];
 
   return (
-    <div className="p-4 sm:p-8 space-y-4 sm:space-y-6">
+    <div className="p-8 space-y-6">
       {/* Welcome Section */}
       <div>
-        <h2 className="text-2xl sm:text-4xl font-bold text-white mb-1 sm:mb-2">Welcome Back</h2>
-        <p className="text-sm sm:text-base text-slate-400">Your personal protection dashboard</p>
+        <h2 className="text-4xl font-bold text-white mb-2">Welcome Back</h2>
+        <p className="text-slate-400">Your personal protection dashboard</p>
       </div>
 
       {/* Protection Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         {protectionStats.map((stat, index) => {
           const Icon = stat.icon;
           const colorMap: any = {
@@ -115,12 +115,12 @@ export function CitizenDashboard() {
               className="relative group"
             >
               <div className={`absolute inset-0 bg-gradient-to-br ${colorMap[stat.color].bg} rounded-2xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity`}></div>
-              <div className="relative bg-white/[0.02] backdrop-blur-xl border border-white/10 rounded-2xl p-3 sm:p-5 shadow-xl">
-                <div className={`w-9 h-9 sm:w-12 sm:h-12 bg-gradient-to-br ${colorMap[stat.color].bg} rounded-lg sm:rounded-xl flex items-center justify-center border ${colorMap[stat.color].border} mb-2 sm:mb-4`}>
-                  <Icon className={`w-4 h-4 sm:w-6 sm:h-6 ${colorMap[stat.color].text}`} />
+              <div className="relative bg-white/[0.02] backdrop-blur-xl border border-white/10 rounded-2xl p-5 shadow-xl">
+                <div className={`w-12 h-12 bg-gradient-to-br ${colorMap[stat.color].bg} rounded-xl flex items-center justify-center border ${colorMap[stat.color].border} mb-4`}>
+                  <Icon className={`w-6 h-6 ${colorMap[stat.color].text}`} />
                 </div>
-                <div className="text-xl sm:text-3xl font-bold text-white mb-0.5 sm:mb-1">{stat.value}</div>
-                <div className="text-xs sm:text-sm text-slate-400">{stat.label}</div>
+                <div className="text-3xl font-bold text-white mb-1">{stat.value}</div>
+                <div className="text-sm text-slate-400">{stat.label}</div>
               </div>
             </motion.div>
           );
@@ -130,9 +130,9 @@ export function CitizenDashboard() {
       {/* Quick Actions */}
       <div className="relative group">
         <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-indigo-500/10 rounded-2xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
-        <div className="relative bg-white/[0.02] backdrop-blur-xl border border-white/10 rounded-2xl p-4 sm:p-6 shadow-xl">
-          <h3 className="text-lg sm:text-2xl font-bold text-white mb-4 sm:mb-6">Quick Actions</h3>
-          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
+        <div className="relative bg-white/[0.02] backdrop-blur-xl border border-white/10 rounded-2xl p-6 shadow-xl">
+          <h3 className="text-2xl font-bold text-white mb-6">Quick Actions</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {quickActions.map((action, index) => {
               const Icon = action.icon;
               const colorMap: any = {
@@ -149,13 +149,13 @@ export function CitizenDashboard() {
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: 0.2 + index * 0.1 }}
                   onClick={() => navigate(action.path)}
-                  className={`text-left p-3 sm:p-5 bg-white/5 border ${colorMap[action.color].border} ${colorMap[action.color].hover} rounded-xl transition-all group/card`}
+                  className={`text-left p-5 bg-white/5 border ${colorMap[action.color].border} ${colorMap[action.color].hover} rounded-xl transition-all group/card`}
                 >
-                  <div className={`w-9 h-9 sm:w-12 sm:h-12 bg-gradient-to-br ${colorMap[action.color].bg} rounded-lg sm:rounded-xl flex items-center justify-center border ${colorMap[action.color].border} mb-2 sm:mb-4 group-hover/card:scale-110 transition-transform`}>
-                    <Icon className={`w-4 h-4 sm:w-6 sm:h-6 ${colorMap[action.color].text}`} />
+                  <div className={`w-12 h-12 bg-gradient-to-br ${colorMap[action.color].bg} rounded-xl flex items-center justify-center border ${colorMap[action.color].border} mb-4 group-hover/card:scale-110 transition-transform`}>
+                    <Icon className={`w-6 h-6 ${colorMap[action.color].text}`} />
                   </div>
-                  <h4 className="text-sm sm:text-lg font-bold text-white mb-0.5 sm:mb-1">{action.title}</h4>
-                  <p className="text-xs sm:text-sm text-slate-400">{action.description}</p>
+                  <h4 className="text-lg font-bold text-white mb-1">{action.title}</h4>
+                  <p className="text-sm text-slate-400">{action.description}</p>
                 </motion.button>
               );
             })}
@@ -251,20 +251,20 @@ export function CitizenDashboard() {
         className="relative group"
       >
         <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-indigo-500/10 rounded-2xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
-        <div className="relative bg-gradient-to-r from-blue-500/10 to-indigo-500/10 border border-blue-500/30 rounded-2xl p-4 sm:p-6 shadow-xl">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
-            <div className="flex items-center gap-3 sm:gap-4">
-              <div className="w-10 h-10 sm:w-14 sm:h-14 bg-blue-500/20 rounded-xl flex items-center justify-center border border-blue-500/30">
-                <Shield className="w-5 h-5 sm:w-7 sm:h-7 text-blue-400" />
+        <div className="relative bg-gradient-to-r from-blue-500/10 to-indigo-500/10 border border-blue-500/30 rounded-2xl p-6 shadow-xl">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 bg-blue-500/20 rounded-xl flex items-center justify-center border border-blue-500/30">
+                <Shield className="w-7 h-7 text-blue-400" />
               </div>
               <div>
-                <h3 className="text-base sm:text-lg font-bold text-white mb-0.5 sm:mb-1">Stay Protected</h3>
-                <p className="text-xs sm:text-sm text-slate-400">Learn how to identify and avoid cyber frauds</p>
+                <h3 className="text-lg font-bold text-white mb-1">Stay Protected</h3>
+                <p className="text-sm text-slate-400">Learn how to identify and avoid cyber frauds</p>
               </div>
             </div>
             <button
               onClick={() => navigate('/citizen/protection-tips')}
-              className="w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 text-blue-400 rounded-xl font-semibold transition-all text-sm"
+              className="px-6 py-3 bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 text-blue-400 rounded-xl font-semibold transition-all"
             >
               View Tips
             </button>

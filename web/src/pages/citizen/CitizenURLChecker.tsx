@@ -46,7 +46,7 @@ export function CitizenURLChecker() {
   };
 
   return (
-    <div className="p-4 sm:p-8 space-y-4 sm:space-y-6 max-w-4xl mx-auto">
+    <div className="p-8 space-y-6 max-w-4xl mx-auto">
       <div>
         <h2 className="text-4xl font-bold text-white mb-2">URL Safety Checker</h2>
         <p className="text-slate-400">Check if a website or link is safe before visiting</p>

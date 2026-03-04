@@ -22,7 +22,7 @@ export function CitizenReportFraud() {
 
   if (submitted) {
     return (
-      <div className="p-4 sm:p-8 flex items-center justify-center min-h-[60vh]">
+      <div className="p-8 flex items-center justify-center min-h-[60vh]">
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -42,7 +42,7 @@ export function CitizenReportFraud() {
   }
 
   return (
-    <div className="p-4 sm:p-8 space-y-4 sm:space-y-6 max-w-4xl mx-auto">
+    <div className="p-8 space-y-6 max-w-4xl mx-auto">
       <div>
         <h2 className="text-4xl font-bold text-white mb-2">Report Fraud</h2>
         <p className="text-slate-400">Help us stop cyber criminals by reporting suspicious activity</p>

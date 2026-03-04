@@ -66,7 +66,7 @@ const tips = [
 
 export function CitizenProtectionTips() {
   return (
-    <div className="p-4 sm:p-8 space-y-4 sm:space-y-8">
+    <div className="p-8 space-y-8">
       <div>
         <h2 className="text-4xl font-bold text-white mb-2">Cyber Safety Guide</h2>
         <p className="text-slate-400">Learn how to protect yourself from digital frauds and scams</p>
