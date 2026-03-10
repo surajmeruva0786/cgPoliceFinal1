@@ -18,11 +18,15 @@ export function NewspaperIntelligence() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Get user context from localStorage
+  const userType = localStorage.getItem('user_type') || 'official';
+  const userId = parseInt(localStorage.getItem(userType === 'official' ? 'official_id' : 'citizen_id') || '1');
+
   const fetchNews = async () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch('http://localhost:8000/news-intel');
+      const response = await fetch(`http://localhost:8000/news-intel?user_id=${userId}&user_type=${userType}`);
       if (!response.ok) throw new Error('Failed to fetch news');
       const data = await response.json();
 

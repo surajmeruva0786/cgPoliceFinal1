@@ -1,16 +1,16 @@
 """
-DFDC Deepfake Detector - Largest Face Version
-Fully compatible with selimsef/dfdc_deepfake_challenge
-GPU optimized + FP16
+Deepfake Detector — ResNet50 + Bi-LSTM + Attention
+Loads best_model.pth and classifies videos as REAL or FAKE.
 """
 
 import os
 import cv2
 import torch
-import timm
+import torch.nn as nn
 import numpy as np
 from PIL import Image
 from facenet_pytorch import MTCNN
+from torchvision import models
 import warnings
 warnings.filterwarnings("ignore")
 
@@ -18,12 +18,99 @@ torch.backends.cudnn.benchmark = True
 
 
 # ============================================================
-# MODEL
+# MODEL ARCHITECTURE (must match best_model.pth checkpoint)
+# ============================================================
+
+class AttentionLayer(nn.Module):
+    """Attention mechanism over LSTM sequence outputs."""
+
+    def __init__(self, hidden_size):
+        super().__init__()
+        self.attention = nn.Sequential(
+            nn.Linear(hidden_size, 128),
+            nn.Tanh(),
+            nn.Linear(128, 1),
+        )
+
+    def forward(self, lstm_output):
+        # lstm_output: (batch, seq_len, hidden_size)
+        weights = self.attention(lstm_output)          # (batch, seq_len, 1)
+        weights = torch.softmax(weights, dim=1)        # (batch, seq_len, 1)
+        weighted = torch.sum(lstm_output * weights, dim=1)  # (batch, hidden_size)
+        return weighted
+
+
+class DeepfakeModel(nn.Module):
+    """ResNet50 + Bi-LSTM + Attention deepfake classifier."""
+
+    def __init__(self, num_classes=2, lstm_hidden=256, lstm_layers=2):
+        super().__init__()
+
+        # CNN backbone: ResNet50 (all layers exposed as nn.Sequential children)
+        resnet = models.resnet50(weights=None)
+        self.cnn = nn.Sequential(
+            resnet.conv1,    # 0
+            resnet.bn1,      # 1
+            resnet.relu,     # 2
+            resnet.maxpool,  # 3
+            resnet.layer1,   # 4
+            resnet.layer2,   # 5
+            resnet.layer3,   # 6
+            resnet.layer4,   # 7
+        )
+
+        # Projection: 2048 -> 512
+        self.project = nn.Linear(2048, lstm_hidden * 2)  # 512
+
+        # Bi-LSTM
+        self.lstm = nn.LSTM(
+            input_size=lstm_hidden * 2,    # 512
+            hidden_size=lstm_hidden,        # 256
+            num_layers=lstm_layers,
+            batch_first=True,
+            bidirectional=True,
+        )
+
+        # Attention
+        self.attention = AttentionLayer(lstm_hidden * 2)  # 512
+
+        # Classifier
+        self.classifier = nn.Sequential(
+            nn.Linear(lstm_hidden * 2, 256),  # 0
+            nn.ReLU(),                         # 1
+            nn.Dropout(0.3),                   # 2
+            nn.Linear(256, num_classes),       # 3
+        )
+
+    def forward(self, x):
+        """
+        x: (batch, seq_len, C, H, W)
+        """
+        batch, seq_len, C, H, W = x.shape
+
+        # Process all frames through CNN
+        x = x.view(batch * seq_len, C, H, W)
+        features = self.cnn(x)                           # (B*T, 2048, h, w)
+        features = features.mean(dim=[2, 3])              # GAP → (B*T, 2048)
+        features = self.project(features)                 # (B*T, 512)
+        features = features.view(batch, seq_len, -1)      # (B, T, 512)
+
+        # Sequence modelling
+        lstm_out, _ = self.lstm(features)                 # (B, T, 512)
+        attended = self.attention(lstm_out)                # (B, 512)
+
+        # Classification
+        logits = self.classifier(attended)                # (B, 2)
+        return logits
+
+
+# ============================================================
+# DETECTOR WRAPPER
 # ============================================================
 
 class DeepfakeDetector:
 
-    def __init__(self, weights_dir="weights", device="auto", use_ensemble=True):
+    def __init__(self, weights_dir="weights", device="auto"):
 
         self.device = torch.device(
             "cuda" if torch.cuda.is_available() else "cpu"
@@ -34,82 +121,50 @@ class DeepfakeDetector:
         else:
             print("⚠ Running on CPU")
 
-        # MTCNN detector (inference thresholds)
+        # MTCNN face detector
         self.detector = MTCNN(
             margin=0,
             thresholds=[0.7, 0.8, 0.8],
-            device=self.device
+            device=self.device,
         )
 
-        self.models = self._load_models(weights_dir, use_ensemble)
+        self.model = self._load_model(weights_dir)
 
     # --------------------------------------------------------
 
-    def _create_model(self):
-        model = timm.create_model(
-            "tf_efficientnet_b7_ns",
-            pretrained=False,
-            num_classes=1
-        )
+    def _load_model(self, weights_dir):
+
+        weight_path = os.path.join(weights_dir, "best_model.pth")
+
+        if not os.path.exists(weight_path):
+            print(f"⚠ Model weights not found at {weight_path}")
+            return None
+
+        print(f"📥 Loading model from {weight_path}...")
+
+        model = DeepfakeModel(num_classes=2, lstm_hidden=256, lstm_layers=2)
+
+        state_dict = torch.load(weight_path, map_location="cpu", weights_only=False)
+
+        # Clean keys if wrapped in DataParallel
+        cleaned = {}
+        for k, v in state_dict.items():
+            key = k
+            if key.startswith("module."):
+                key = key[7:]
+            cleaned[key] = v
+
+        model.load_state_dict(cleaned, strict=True)
+        model.to(self.device)
+        model.eval()
+
+        print("✅ Model loaded successfully\n")
         return model
 
     # --------------------------------------------------------
 
-    def _load_models(self, weights_dir, use_ensemble):
-
-        if not os.path.exists(weights_dir):
-             os.makedirs(weights_dir, exist_ok=True)
-             print(f"⚠ Created weights directory at {weights_dir}. Please add model weights.")
-             return []
-
-        weight_files = [
-            os.path.join(weights_dir, f)
-            for f in os.listdir(weights_dir)
-            if "tf_efficientnet_b7_ns" in f
-        ]
-
-        if not weight_files:
-            print("⚠ No weights found in weights directory. Models will not be loaded.")
-            return []
-
-        if not use_ensemble:
-            weight_files = weight_files[:1]
-
-        print(f"📥 Loading {len(weight_files)} model(s)...")
-
-        models = []
-
-        for wf in weight_files:
-            print(f"   → {os.path.basename(wf)}")
-
-            model = self._create_model()
-
-            checkpoint = torch.load(wf, map_location="cpu", weights_only=False)
-
-            state_dict = checkpoint["state_dict"] if "state_dict" in checkpoint else checkpoint
-
-            cleaned = {}
-            for k, v in state_dict.items():
-                if k.startswith("module."):
-                    k = k[7:]
-                if k.startswith("model."):
-                    k = k[6:]
-                cleaned[k] = v
-
-            model.load_state_dict(cleaned, strict=False)
-            model.to(self.device)
-            model.eval()
-
-            models.append(model)
-
-        print("✅ Models loaded successfully\n")
-        return models
-
-    # --------------------------------------------------------
-    # ISOTROPIC RESIZE
-    # --------------------------------------------------------
-
-    def isotropic_resize(self, img, size=380):
+    def isotropic_resize(self, img, size=224):
+        """Resize keeping aspect ratio, pad to square."""
         h, w = img.shape[:2]
 
         if w > h:
@@ -125,46 +180,33 @@ class DeepfakeDetector:
         resized = cv2.resize(img, (new_w, new_h), interpolation=interpolation)
 
         canvas = np.zeros((size, size, 3), dtype=np.uint8)
-
         start_x = (size - new_w) // 2
         start_y = (size - new_h) // 2
-
         canvas[start_y:start_y + new_h, start_x:start_x + new_w] = resized
 
         return canvas
 
     # --------------------------------------------------------
 
-    def confident_strategy(self, preds, t=0.8):
+    def predict_video(self, video_path, num_frames=16):
+        """
+        Classify a video as REAL or FAKE using the ResNet50 + BiLSTM + Attention model.
+        Extracts face crops from evenly-sampled frames, then runs the full sequence
+        through the model for a single prediction.
+        """
 
-        preds = np.array(preds)
-        sz = len(preds)
-        fakes = np.count_nonzero(preds > t)
-
-        if fakes > sz // 2.5 and fakes > 11:
-            return np.mean(preds[preds > t])
-        elif np.count_nonzero(preds < 0.2) > 0.9 * sz:
-            return np.mean(preds[preds < 0.2])
-        else:
-            return np.mean(preds)
-
-    # --------------------------------------------------------
-
-    def predict_video(self, video_path, num_frames=32):
-        
-        if not self.models:
-            return {"prediction": "ERROR: No models loaded", "confidence": 0.0}
+        if self.model is None:
+            return {"prediction": "ERROR: No model loaded", "confidence": 0.0}
 
         cap = cv2.VideoCapture(video_path)
         total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-        
+
         if total <= 0:
-             cap.release()
-             return {"prediction": "ERROR: Could not read video", "confidence": 0.0}
+            cap.release()
+            return {"prediction": "ERROR: Could not read video", "confidence": 0.0}
 
         indices = np.linspace(0, total - 1, num_frames, dtype=int)
-
-        preds = []
+        face_crops = []
 
         for idx in indices:
             cap.set(cv2.CAP_PROP_POS_FRAMES, idx)
@@ -173,79 +215,78 @@ class DeepfakeDetector:
                 continue
 
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-
             h, w = frame.shape[:2]
 
-            # Half resolution detection
+            # Half-resolution face detection for speed
             img_half = Image.fromarray(frame).resize((w // 2, h // 2))
             boxes, _ = self.detector.detect(img_half)
 
             if boxes is None:
                 continue
 
-            # Take largest face
-            areas = [(b[2]-b[0])*(b[3]-b[1]) for b in boxes]
+            # Take the largest face
+            areas = [(b[2] - b[0]) * (b[3] - b[1]) for b in boxes]
             bbox = boxes[np.argmax(areas)]
-
             xmin, ymin, xmax, ymax = [int(b * 2) for b in bbox]
 
+            # Pad bounding box
             w_box = xmax - xmin
             h_box = ymax - ymin
-
             pad_w = w_box // 3
             pad_h = h_box // 3
 
             crop = frame[
                 max(ymin - pad_h, 0):ymax + pad_h,
-                max(xmin - pad_w, 0):xmax + pad_w
+                max(xmin - pad_w, 0):xmax + pad_w,
             ]
-            
+
             if crop.size == 0:
                 continue
 
-            crop = self.isotropic_resize(crop, 380)
-
-            tensor = torch.tensor(crop, device=self.device).float()
-            tensor = tensor.permute(2, 0, 1) / 255.0
-
-            # ImageNet normalization
-            mean = torch.tensor([0.485, 0.456, 0.406], device=self.device).view(3,1,1)
-            std = torch.tensor([0.229, 0.224, 0.225], device=self.device).view(3,1,1)
-            tensor = (tensor - mean) / std
-
-            if self.device.type == "cuda":
-                tensor = tensor.unsqueeze(0).half()
-            else:
-                tensor = tensor.unsqueeze(0).float()
-
-            with torch.no_grad():
-                with torch.cuda.amp.autocast(enabled=self.device.type == "cuda"):
-                    frame_preds = []
-                    for model in self.models:
-                        output = model(tensor)
-                        prob = torch.sigmoid(output)[0].item()
-                        frame_preds.append(prob)
-
-                    preds.append(np.mean(frame_preds))
+            crop = self.isotropic_resize(crop, 224)
+            face_crops.append(crop)
 
         cap.release()
 
-        if len(preds) == 0:
+        if len(face_crops) == 0:
             return {"prediction": "UNKNOWN", "confidence": 0.0}
 
-        final_score = self.confident_strategy(preds)
+        # Pad or truncate to exactly num_frames
+        while len(face_crops) < num_frames:
+            face_crops.append(face_crops[-1])  # repeat last frame
+        face_crops = face_crops[:num_frames]
 
-        prediction = "FAKE" if final_score > 0.5 else "REAL"
+        # Build tensor: (1, seq_len, C, H, W)
+        frames_np = np.stack(face_crops, axis=0)  # (T, H, W, 3)
+        tensor = torch.tensor(frames_np, dtype=torch.float32, device=self.device)
+        tensor = tensor.permute(0, 3, 1, 2) / 255.0  # (T, 3, H, W)
 
-        return {"prediction": prediction, "confidence": float(final_score)}
+        # ImageNet normalization
+        mean = torch.tensor([0.485, 0.456, 0.406], device=self.device).view(1, 3, 1, 1)
+        std = torch.tensor([0.229, 0.224, 0.225], device=self.device).view(1, 3, 1, 1)
+        tensor = (tensor - mean) / std
+
+        tensor = tensor.unsqueeze(0)  # (1, T, 3, 224, 224)
+
+        with torch.no_grad():
+            logits = self.model(tensor)                        # (1, 2)
+            probs = torch.softmax(logits, dim=1)[0]            # (2,)
+            pred_class = torch.argmax(probs).item()
+            confidence = probs[pred_class].item()
+
+        # Class mapping: index 0 = REAL, index 1 = FAKE
+        prediction = "FAKE" if pred_class == 1 else "REAL"
+
+        return {"prediction": prediction, "confidence": float(confidence)}
+
 
 if __name__ == "__main__":
     import argparse
+
     parser = argparse.ArgumentParser()
     parser.add_argument("video_path")
     args = parser.parse_args()
-    
-    # Initialize with default weights dir
+
     detector = DeepfakeDetector()
     result = detector.predict_video(args.video_path)
     print(f"Prediction: {result}")

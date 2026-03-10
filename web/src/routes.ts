@@ -11,23 +11,16 @@ import { AIChatbot } from "./pages/AIChatbot";
 import { NewspaperIntelligence } from "./pages/NewspaperIntelligence";
 import { DocumentSummarizer } from "./pages/DocumentSummarizer";
 import { FraudURLDetection } from "./pages/FraudURLDetection";
-import { CitizenLoginPage } from "./pages/citizen/CitizenLoginPage";
-
-// Citizen Portal
-import { CitizenPortalLayout } from "./components/CitizenPortalLayout";
-import { CitizenDashboard } from "./pages/citizen/CitizenDashboard";
-import { CitizenURLChecker } from "./pages/citizen/CitizenURLChecker";
-import { CitizenDeepfakeDetector } from "./pages/citizen/CitizenDeepfakeDetector";
-import { CitizenIdentityVerifier } from "./pages/citizen/CitizenIdentityVerifier";
-import { CitizenReportFraud } from "./pages/citizen/CitizenReportFraud";
-import { CitizenProtectionTips } from "./pages/citizen/CitizenProtectionTips";
-import { CitizenLiveAlerts } from "./pages/citizen/CitizenLiveAlerts";
-import { CitizenAIAssistant } from "./pages/citizen/CitizenAIAssistant";
+import { CitizenPortal } from "./pages/CitizenPortal";
 
 export const router = createBrowserRouter([
   {
     path: "/",
     Component: LoginPage,
+  },
+  {
+    path: "/citizen",
+    Component: CitizenPortal,
   },
   // Admin Dashboard Routes
   {
@@ -44,25 +37,6 @@ export const router = createBrowserRouter([
       { path: "chatbot", Component: AIChatbot },
       { path: "newspaper", Component: NewspaperIntelligence },
       { path: "documents", Component: DocumentSummarizer },
-    ],
-  },
-  {
-    path: "/citizen/login",
-    Component: CitizenLoginPage,
-  },
-  // Citizen Portal Routes
-  {
-    path: "/citizen",
-    Component: CitizenPortalLayout,
-    children: [
-      { index: true, Component: CitizenDashboard },
-      { path: "url-checker", Component: CitizenURLChecker },
-      { path: "deepfake-detector", Component: CitizenDeepfakeDetector },
-      { path: "verify-official", Component: CitizenIdentityVerifier },
-      { path: "report-fraud", Component: CitizenReportFraud },
-      { path: "protection-tips", Component: CitizenProtectionTips },
-      { path: "alerts", Component: CitizenLiveAlerts },
-      { path: "ai-assistant", Component: CitizenAIAssistant },
     ],
   },
 ]);

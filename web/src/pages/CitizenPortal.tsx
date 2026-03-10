@@ -1,7 +1,9 @@
 import { motion } from 'motion/react';
-import { Shield, Search, AlertTriangle, Phone, MessageSquare, Video, UserCheck, FileText, Send, CheckCircle, ExternalLink, ArrowLeft } from 'lucide-react';
-import { useState } from 'react';
+import { Shield, Search, AlertTriangle, Phone, MessageSquare, Video, UserCheck, FileText, Send, CheckCircle, ExternalLink, ArrowLeft, Lock, User, LogIn } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
+
+const API_BASE = 'http://localhost:8000';
 
 const protectionTips = [
   {
@@ -55,6 +57,128 @@ export function CitizenPortal() {
   });
   const [submitted, setSubmitted] = useState(false);
 
+  // Auth state
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [showAuth, setShowAuth] = useState(false);
+  const [isRegister, setIsRegister] = useState(false);
+  const [authLoading, setAuthLoading] = useState(false);
+  const [authError, setAuthError] = useState('');
+  const [authForm, setAuthForm] = useState({ phone: '', password: '', name: '' });
+  const [citizenId, setCitizenId] = useState<number | null>(null);
+  const [citizenName, setCitizenName] = useState('');
+
+  // URL check state
+  const [urlInput, setUrlInput] = useState('');
+  const [urlResult, setUrlResult] = useState<any>(null);
+  const [urlChecking, setUrlChecking] = useState(false);
+
+  // Check if already logged in
+  useEffect(() => {
+    const storedId = localStorage.getItem('citizen_id');
+    const storedName = localStorage.getItem('citizen_name');
+    if (storedId) {
+      setCitizenId(parseInt(storedId));
+      setCitizenName(storedName || 'Citizen');
+      setIsAuthenticated(true);
+    }
+  }, []);
+
+  const handleAuth = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthLoading(true);
+    setAuthError('');
+
+    try {
+      const endpoint = isRegister ? '/auth/citizen/register' : '/auth/citizen/login';
+      const body: any = { phone: authForm.phone, password: authForm.password };
+      if (isRegister) body.name = authForm.name || 'Citizen';
+
+      const response = await fetch(`${API_BASE}${endpoint}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.detail || 'Authentication failed');
+
+      // Store auth
+      localStorage.setItem('user_type', 'citizen');
+      localStorage.setItem('citizen_id', String(data.citizen_id));
+      localStorage.setItem('citizen_name', data.name || 'Citizen');
+      setCitizenId(data.citizen_id);
+      setCitizenName(data.name || 'Citizen');
+      setIsAuthenticated(true);
+      setShowAuth(false);
+    } catch (err: any) {
+      setAuthError(err.message);
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('user_type');
+    localStorage.removeItem('citizen_id');
+    localStorage.removeItem('citizen_name');
+    setCitizenId(null);
+    setCitizenName('');
+    setIsAuthenticated(false);
+  };
+
+  const handleUrlCheck = async () => {
+    if (!urlInput || !citizenId) return;
+    setUrlChecking(true);
+    setUrlResult(null);
+    try {
+      const response = await fetch(`${API_BASE}/check-url`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: urlInput, citizen_id: citizenId })
+      });
+      const data = await response.json();
+      setUrlResult(data);
+    } catch {
+      setUrlResult({ status: 'ERROR', error: 'Failed to check URL. Ensure backend is running.' });
+    } finally {
+      setUrlChecking(false);
+    }
+  };
+
+  const handleSubmitReport = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!citizenId) {
+      setShowAuth(true);
+      return;
+    }
+    try {
+      await fetch(`${API_BASE}/report-fraud`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fraud_type: reportData.type,
+          contact_info: reportData.content,
+          details: reportData.details,
+          citizen_id: citizenId
+        })
+      });
+    } catch { }
+    setSubmitted(true);
+    setTimeout(() => {
+      setActiveService(null);
+      setSubmitted(false);
+      setReportData({ type: '', content: '', details: '' });
+    }, 3000);
+  };
+
+  const requireAuth = (serviceId: string) => {
+    if (!isAuthenticated) {
+      setShowAuth(true);
+      return;
+    }
+    setActiveService(serviceId);
+  };
+
   const services = [
     {
       id: 'check-url',
@@ -86,16 +210,6 @@ export function CitizenPortal() {
     }
   ];
 
-  const handleSubmitReport = (e: React.FormEvent) => {
-    e.preventDefault();
-    setSubmitted(true);
-    setTimeout(() => {
-      setActiveService(null);
-      setSubmitted(false);
-      setReportData({ type: '', content: '', details: '' });
-    }, 3000);
-  };
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
       {/* Header */}
@@ -116,16 +230,151 @@ export function CitizenPortal() {
               </div>
             </div>
 
-            <button
-              onClick={() => navigate('/')}
-              className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 hover:text-white rounded-lg transition-all duration-300"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              <span className="text-sm font-medium">Officer Login</span>
-            </button>
+            <div className="flex items-center gap-3">
+              {isAuthenticated ? (
+                <>
+                  <div className="text-right">
+                    <div className="text-sm font-semibold text-white">{citizenName}</div>
+                    <div className="text-xs text-slate-400">Citizen</div>
+                  </div>
+                  <button
+                    onClick={handleLogout}
+                    className="flex items-center gap-2 px-4 py-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 rounded-lg transition-all duration-300"
+                  >
+                    <LogIn className="w-4 h-4" />
+                    <span className="text-sm font-medium">Logout</span>
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    onClick={() => { setShowAuth(true); setIsRegister(false); }}
+                    className="flex items-center gap-2 px-4 py-2 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 text-blue-400 rounded-lg transition-all duration-300"
+                  >
+                    <LogIn className="w-4 h-4" />
+                    <span className="text-sm font-medium">Login</span>
+                  </button>
+                  <button
+                    onClick={() => { setShowAuth(true); setIsRegister(true); }}
+                    className="flex items-center gap-2 px-4 py-2 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 text-emerald-400 rounded-lg transition-all duration-300"
+                  >
+                    <User className="w-4 h-4" />
+                    <span className="text-sm font-medium">Register</span>
+                  </button>
+                </>
+              )}
+              <button
+                onClick={() => navigate('/')}
+                className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 hover:text-white rounded-lg transition-all duration-300"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span className="text-sm font-medium">Officer Login</span>
+              </button>
+            </div>
           </div>
         </div>
       </header>
+
+      {/* Auth Modal */}
+      {showAuth && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/80 backdrop-blur-sm"
+          onClick={() => setShowAuth(false)}
+        >
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            onClick={(e) => e.stopPropagation()}
+            className="relative bg-gradient-to-br from-slate-900 to-slate-800 border border-white/10 rounded-3xl p-8 max-w-md w-full shadow-2xl"
+          >
+            <button
+              onClick={() => setShowAuth(false)}
+              className="absolute top-6 right-6 text-slate-400 hover:text-white transition-colors"
+            >
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+
+            <h3 className="text-2xl font-bold text-white mb-2">
+              {isRegister ? 'Create Account' : 'Citizen Login'}
+            </h3>
+            <p className="text-slate-400 mb-6 text-sm">
+              {isRegister ? 'Register to access fraud protection services' : 'Login to access your account'}
+            </p>
+
+            {authError && (
+              <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-sm text-red-400">
+                {authError}
+              </div>
+            )}
+
+            <form onSubmit={handleAuth} className="space-y-4">
+              {isRegister && (
+                <div>
+                  <label className="block text-sm font-semibold text-slate-300 mb-2">Full Name</label>
+                  <div className="relative">
+                    <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                    <input
+                      type="text"
+                      value={authForm.name}
+                      onChange={(e) => setAuthForm({ ...authForm, name: e.target.value })}
+                      placeholder="Your full name"
+                      className="w-full bg-white/5 border border-white/10 rounded-xl pl-11 pr-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-blue-400/50 transition-all"
+                    />
+                  </div>
+                </div>
+              )}
+              <div>
+                <label className="block text-sm font-semibold text-slate-300 mb-2">Phone Number</label>
+                <div className="relative">
+                  <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                  <input
+                    type="tel"
+                    value={authForm.phone}
+                    onChange={(e) => setAuthForm({ ...authForm, phone: e.target.value })}
+                    placeholder="Enter phone number"
+                    className="w-full bg-white/5 border border-white/10 rounded-xl pl-11 pr-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-blue-400/50 transition-all"
+                    required
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-slate-300 mb-2">Password</label>
+                <div className="relative">
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                  <input
+                    type="password"
+                    value={authForm.password}
+                    onChange={(e) => setAuthForm({ ...authForm, password: e.target.value })}
+                    placeholder="Enter password"
+                    className="w-full bg-white/5 border border-white/10 rounded-xl pl-11 pr-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-blue-400/50 transition-all"
+                    required
+                  />
+                </div>
+              </div>
+              <button
+                type="submit"
+                disabled={authLoading}
+                className="w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-semibold rounded-xl transition-all shadow-lg"
+              >
+                {authLoading ? 'Please wait...' : (isRegister ? 'Create Account' : 'Login')}
+              </button>
+            </form>
+
+            <div className="mt-6 text-center">
+              <button
+                onClick={() => { setIsRegister(!isRegister); setAuthError(''); }}
+                className="text-sm text-blue-400 hover:text-blue-300 transition-colors"
+              >
+                {isRegister ? 'Already have an account? Login' : "Don't have an account? Register"}
+              </button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
 
       <div className="max-w-7xl mx-auto px-6 py-12 space-y-12">
         {/* Hero Section */}
@@ -146,12 +395,12 @@ export function CitizenPortal() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {services.map((service, index) => {
             const Icon = service.icon;
-            const colorMap = {
+            const colorMap = ({
               blue: { bg: 'from-blue-500/20 to-indigo-500/20', border: 'border-blue-500/30', text: 'text-blue-400', iconBg: 'bg-blue-500/20' },
               red: { bg: 'from-red-500/20 to-pink-500/20', border: 'border-red-500/30', text: 'text-red-400', iconBg: 'bg-red-500/20' },
               emerald: { bg: 'from-emerald-500/20 to-green-500/20', border: 'border-emerald-500/30', text: 'text-emerald-400', iconBg: 'bg-emerald-500/20' },
               amber: { bg: 'from-amber-500/20 to-orange-500/20', border: 'border-amber-500/30', text: 'text-amber-400', iconBg: 'bg-amber-500/20' }
-            }[service.color];
+            } as Record<string, { bg: string; border: string; text: string; iconBg: string }>)[service.color] || { bg: 'from-blue-500/20 to-indigo-500/20', border: 'border-blue-500/30', text: 'text-blue-400', iconBg: 'bg-blue-500/20' };
 
             return (
               <motion.button
@@ -159,7 +408,7 @@ export function CitizenPortal() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.1 }}
-                onClick={() => setActiveService(service.id)}
+                onClick={() => requireAuth(service.id)}
                 className="relative group text-left"
               >
                 <div className={`absolute inset-0 bg-gradient-to-br ${colorMap.bg} rounded-2xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity`}></div>
@@ -216,17 +465,47 @@ export function CitizenPortal() {
                           </label>
                           <input
                             type="text"
+                            value={urlInput}
+                            onChange={(e) => setUrlInput(e.target.value)}
                             placeholder="https://example.com or paste link here"
                             className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-4 text-white placeholder-slate-500 focus:outline-none focus:border-blue-400/50 transition-all"
                             required
                           />
                         </div>
                         <button
-                          type="submit"
-                          className="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-semibold rounded-xl transition-all shadow-lg"
+                          type="button"
+                          onClick={handleUrlCheck}
+                          disabled={urlChecking || !urlInput}
+                          className="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-semibold rounded-xl transition-all shadow-lg disabled:opacity-50"
                         >
-                          Check Safety
+                          {urlChecking ? 'Checking...' : 'Check Safety'}
                         </button>
+                        {urlResult && (
+                          <motion.div
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className={`p-4 rounded-xl border ${urlResult.status === 'UNSAFE'
+                              ? 'bg-red-500/10 border-red-500/30'
+                              : urlResult.status === 'SAFE'
+                                ? 'bg-emerald-500/10 border-emerald-500/30'
+                                : 'bg-amber-500/10 border-amber-500/30'
+                              }`}
+                          >
+                            <div className="flex items-center gap-2 mb-2">
+                              {urlResult.status === 'SAFE'
+                                ? <CheckCircle className="w-5 h-5 text-emerald-400" />
+                                : <AlertTriangle className="w-5 h-5 text-red-400" />}
+                              <span className={`font-bold ${urlResult.status === 'SAFE' ? 'text-emerald-400' : 'text-red-400'}`}>
+                                {urlResult.status}
+                              </span>
+                            </div>
+                            {urlResult.threats?.length > 0 && (
+                              <div className="text-sm text-red-300">
+                                <strong>Threats:</strong> {urlResult.threats.map((t: any) => t.threatType).join(', ')}
+                              </div>
+                            )}
+                          </motion.div>
+                        )}
                       </div>
                     )}
 
@@ -372,11 +651,10 @@ export function CitizenPortal() {
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: index * 0.1 }}
-                  className={`p-5 rounded-xl border backdrop-blur-sm ${
-                    alert.type === 'high'
-                      ? 'bg-red-500/5 border-red-500/20'
-                      : 'bg-amber-500/5 border-amber-500/20'
-                  }`}
+                  className={`p-5 rounded-xl border backdrop-blur-sm ${alert.type === 'high'
+                    ? 'bg-red-500/5 border-red-500/20'
+                    : 'bg-amber-500/5 border-amber-500/20'
+                    }`}
                 >
                   <div className="flex items-start justify-between mb-2">
                     <div className="flex items-center gap-3">
@@ -397,7 +675,7 @@ export function CitizenPortal() {
           <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-indigo-500/10 rounded-2xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
           <div className="relative bg-white/[0.02] backdrop-blur-xl border border-white/10 rounded-2xl p-8 shadow-xl">
             <h3 className="text-2xl font-bold text-white mb-6">Stay Protected - Quick Tips</h3>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {protectionTips.map((tip, index) => {
                 const Icon = tip.icon;

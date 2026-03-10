@@ -1,12 +1,12 @@
 import { Outlet, useNavigate, useLocation } from 'react-router';
-import { 
-  LayoutDashboard, 
-  AlertTriangle, 
-  Video, 
-  UserCheck, 
-  Brain, 
-  MessageSquare, 
-  Newspaper, 
+import {
+  LayoutDashboard,
+  AlertTriangle,
+  Video,
+  UserCheck,
+  Brain,
+  MessageSquare,
+  Newspaper,
   FileText,
   LogOut,
   Shield,
@@ -33,14 +33,23 @@ export function DashboardLayout() {
   const navigate = useNavigate();
   const location = useLocation();
 
+  // Get user context from localStorage
+  const userName = localStorage.getItem('user_name') || 'Official';
+  const username = localStorage.getItem('username') || 'admin';
+
   const handleLogout = () => {
+    localStorage.removeItem('user_type');
+    localStorage.removeItem('official_id');
+    localStorage.removeItem('citizen_id');
+    localStorage.removeItem('user_name');
+    localStorage.removeItem('username');
     navigate('/');
   };
 
   const getCurrentTime = () => {
     const now = new Date();
-    return now.toLocaleString('en-IN', { 
-      dateStyle: 'medium', 
+    return now.toLocaleString('en-IN', {
+      dateStyle: 'medium',
       timeStyle: 'short',
       timeZone: 'Asia/Kolkata'
     });
@@ -80,13 +89,13 @@ export function DashboardLayout() {
                 <div className="text-xs text-amber-400 font-medium">Active Alerts</div>
                 <div className="text-xl font-bold text-white">247</div>
               </div>
-              
+
               <div className="h-10 w-px bg-white/10"></div>
-              
+
               <div className="flex items-center gap-3">
                 <div className="text-right">
-                  <div className="text-sm font-semibold text-white">IG Cyber Crime</div>
-                  <div className="text-xs text-slate-400">Inspector General</div>
+                  <div className="text-sm font-semibold text-white">{userName}</div>
+                  <div className="text-xs text-slate-400">{username}</div>
                 </div>
                 <div className="relative">
                   <div className="w-11 h-11 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg ring-2 ring-blue-400/20">
@@ -112,16 +121,15 @@ export function DashboardLayout() {
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = location.pathname === item.path;
-              
+
               return (
                 <motion.button
                   key={item.path}
                   onClick={() => navigate(item.path)}
-                  className={`relative flex items-center gap-2 px-4 py-2.5 rounded-lg transition-all duration-300 ${
-                    isActive 
-                      ? 'bg-white/10 text-white shadow-lg backdrop-blur-sm' 
+                  className={`relative flex items-center gap-2 px-4 py-2.5 rounded-lg transition-all duration-300 ${isActive
+                      ? 'bg-white/10 text-white shadow-lg backdrop-blur-sm'
                       : 'text-slate-400 hover:text-white hover:bg-white/5'
-                  }`}
+                    }`}
                   whileHover={{ y: -2 }}
                   whileTap={{ scale: 0.98 }}
                 >

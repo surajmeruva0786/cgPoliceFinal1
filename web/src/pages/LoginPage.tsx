@@ -1,16 +1,24 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
-import { Shield, Lock, User, Key, Sparkles } from 'lucide-react';
+import { Shield, Lock, User, Sparkles } from 'lucide-react';
 import { motion } from 'motion/react';
+
+const API_BASE = 'http://localhost:8000';
 
 export function LoginPage() {
   const navigate = useNavigate();
   const [officialId, setOfficialId] = useState('');
   const [password, setPassword] = useState('');
-  const [twoFactor, setTwoFactor] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
+    // Skip auth — go straight to dashboard (prototyping mode)
+    localStorage.setItem('user_type', 'official');
+    localStorage.setItem('official_id', '1');
+    localStorage.setItem('user_name', officialId || 'IG Cyber Crime');
+    localStorage.setItem('username', officialId || 'admin');
     navigate('/dashboard');
   };
 
@@ -113,10 +121,21 @@ export function LoginPage() {
                 <p className="text-sm text-slate-400">Enter your authorized credentials to continue</p>
               </div>
 
+              {/* Error Message */}
+              {error && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-xl"
+                >
+                  <p className="text-sm text-red-400">{error}</p>
+                </motion.div>
+              )}
+
               <form onSubmit={handleLogin} className="space-y-5">
                 <div>
                   <label className="block text-sm font-semibold text-slate-300 mb-3">
-                    Official ID
+                    Username
                   </label>
                   <div className="relative group">
                     <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-indigo-500/20 rounded-xl blur opacity-0 group-focus-within:opacity-100 transition-opacity"></div>
@@ -125,8 +144,9 @@ export function LoginPage() {
                       type="text"
                       value={officialId}
                       onChange={(e) => setOfficialId(e.target.value)}
-                      placeholder="Enter your official ID"
+                      placeholder="Enter your username"
                       className="relative w-full bg-white/5 border border-white/10 rounded-xl pl-12 pr-4 py-4 text-white placeholder-slate-500 focus:outline-none focus:border-blue-400/50 focus:bg-white/10 transition-all backdrop-blur-sm"
+                      required
                     />
                   </div>
                 </div>
@@ -144,58 +164,31 @@ export function LoginPage() {
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="Enter your password"
                       className="relative w-full bg-white/5 border border-white/10 rounded-xl pl-12 pr-4 py-4 text-white placeholder-slate-500 focus:outline-none focus:border-blue-400/50 focus:bg-white/10 transition-all backdrop-blur-sm"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-slate-300 mb-3">
-                    Two-Factor Authentication Code
-                  </label>
-                  <div className="relative group">
-                    <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-indigo-500/20 rounded-xl blur opacity-0 group-focus-within:opacity-100 transition-opacity"></div>
-                    <Key className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 group-focus-within:text-blue-400 transition-colors" />
-                    <input
-                      type="text"
-                      value={twoFactor}
-                      onChange={(e) => setTwoFactor(e.target.value)}
-                      placeholder="Enter 6-digit verification code"
-                      className="relative w-full bg-white/5 border border-white/10 rounded-xl pl-12 pr-4 py-4 text-white placeholder-slate-500 focus:outline-none focus:border-blue-400/50 focus:bg-white/10 transition-all backdrop-blur-sm"
+                      required
                     />
                   </div>
                 </div>
 
                 <button
                   type="submit"
+                  disabled={loading}
                   className="relative w-full group overflow-hidden"
                 >
                   <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl"></div>
                   <div className="absolute inset-0 bg-gradient-to-r from-blue-400 to-indigo-400 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
                   <div className="relative px-6 py-4 text-white font-semibold text-lg flex items-center justify-center gap-2">
                     <Shield className="w-5 h-5" />
-                    Secure Login
+                    {loading ? 'Authenticating...' : 'Secure Login'}
                   </div>
                 </button>
               </form>
 
               <div className="mt-8 pt-8 border-t border-white/10">
-                <div className="flex items-start gap-3 text-xs text-slate-400 bg-amber-500/5 border border-amber-500/20 rounded-xl p-4 mb-4">
+                <div className="flex items-start gap-3 text-xs text-slate-400 bg-amber-500/5 border border-amber-500/20 rounded-xl p-4">
                   <Shield className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
                   <p className="leading-relaxed">
                     All access is logged and continuously monitored. Unauthorized access attempts will be prosecuted under applicable cyber security laws.
                   </p>
-                </div>
-
-                <div className="text-center space-y-2">
-                  <div className="text-xs text-slate-500 uppercase tracking-wide mb-3">OR</div>
-                  <button
-                    type="button"
-                    onClick={() => navigate('/citizen/login')}
-                    className="w-full px-6 py-3 bg-gradient-to-r from-emerald-500/10 to-green-500/10 hover:from-emerald-500/20 hover:to-green-500/20 border border-emerald-500/30 text-emerald-400 rounded-xl font-semibold transition-all flex items-center justify-center gap-2"
-                  >
-                    <User className="w-4 h-4" />
-                    Access Citizen Protection Portal
-                  </button>
                 </div>
               </div>
             </div>

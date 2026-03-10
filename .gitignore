@@ -3,4 +3,7 @@ backend/weights
 backend/venv
 backend/uploads
 backend/__pycache__
+backend/user_data
+backend/*.db
 .env
+best_model.pth

@@ -1,58 +1,41 @@
 import { motion } from 'motion/react';
 import { Shield, Link, MessageSquare, Search, AlertTriangle, CheckCircle, XCircle, Copy, ExternalLink } from 'lucide-react';
-import { useState } from 'react';
-
-const recentDetections = [
-  {
-    id: 1,
-    url: 'https://fake-sbi-login-secure.com',
-    type: 'url',
-    status: 'malicious',
-    threat: 'Phishing - Bank Impersonation',
-    reportedBy: 347,
-    timestamp: '3 min ago'
-  },
-  {
-    id: 2,
-    message: 'Your Aadhaar is blocked. Click here to verify immediately: bit.ly/aadhar-verify-now',
-    type: 'message',
-    status: 'malicious',
-    threat: 'SMS Phishing',
-    reportedBy: 892,
-    timestamp: '8 min ago'
-  },
-  {
-    id: 3,
-    url: 'https://secure-kyc-update-bank.in',
-    type: 'url',
-    status: 'suspicious',
-    threat: 'Potential KYC Scam',
-    reportedBy: 234,
-    timestamp: '15 min ago'
-  },
-  {
-    id: 4,
-    message: 'Congratulations! You won ₹10 Lakhs lottery. Contact WhatsApp +91-9876543210',
-    type: 'message',
-    status: 'malicious',
-    threat: 'Lottery Scam',
-    reportedBy: 1523,
-    timestamp: '22 min ago'
-  }
-];
-
-const stats = [
-  { label: 'URLs Analyzed Today', value: 15847, trend: '+12%' },
-  { label: 'Malicious Detected', value: 3421, trend: '+8%' },
-  { label: 'Messages Scanned', value: 28934, trend: '+15%' },
-  { label: 'Blocked in Real-time', value: 2876, trend: '+5%' }
-];
+import { useState, useEffect } from 'react';
 
 export function FraudURLDetection() {
   const [inputValue, setInputValue] = useState('');
   const [analysisResult, setAnalysisResult] = useState<any>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [activeTab, setActiveTab] = useState<'url' | 'message'>('url');
+  const [recentDetections, setRecentDetections] = useState<any[]>([]);
+  const [dbStats, setDbStats] = useState<any>(null);
+
+  // Get user context from localStorage
+  const userType = localStorage.getItem('user_type') || 'official';
+  const userId = parseInt(localStorage.getItem(userType === 'official' ? 'official_id' : 'citizen_id') || '1');
+
+  useEffect(() => {
+    const fetchData = () => {
+      fetch(`http://localhost:8000/recent-url-checks/${userId}?limit=10`)
+        .then(r => r.json())
+        .then(data => setRecentDetections(data))
+        .catch(() => { });
+      fetch('http://localhost:8000/dashboard-stats')
+        .then(r => r.json())
+        .then(data => setDbStats(data))
+        .catch(() => { });
+    };
+    fetchData();
+    const interval = setInterval(fetchData, 5000);
+    return () => clearInterval(interval);
+  }, [userId]);
+
+  const stats = [
+    { label: 'URLs Analyzed', value: dbStats?.total_url_checks || 0, trend: `${dbStats?.today_url_checks || 0} today` },
+    { label: 'Unsafe Detected', value: dbStats?.unsafe_urls || 0, trend: 'blocked' },
+    { label: 'Deepfake Scans', value: dbStats?.total_deepfake_scans || 0, trend: `${dbStats?.deepfakes_detected || 0} fakes` },
+    { label: 'Fraud Reports', value: dbStats?.total_fraud_reports || 0, trend: `${dbStats?.pending_reports || 0} pending` }
+  ];
 
   const handleAnalyze = async () => {
     if (!inputValue) return;
@@ -63,7 +46,7 @@ export function FraudURLDetection() {
       const response = await fetch('http://localhost:8000/check-url', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: inputValue }),
+        body: JSON.stringify({ url: inputValue, citizen_id: userId }),
       });
 
       const data = await response.json();
@@ -291,7 +274,7 @@ export function FraudURLDetection() {
           )}
         </motion.div>
 
-        {/* Recent Detections */}
+        {/* Recent Detections — from database */}
         <motion.div
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
@@ -301,39 +284,48 @@ export function FraudURLDetection() {
           <div className="absolute inset-0 bg-gradient-to-br from-amber-500/10 to-orange-500/10 rounded-2xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
           <div className="relative bg-white/[0.02] backdrop-blur-xl border border-white/10 rounded-2xl p-6 shadow-xl">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-bold text-white">Recent Detections</h3>
+              <h3 className="text-xl font-bold text-white">Recent URL Checks</h3>
               <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse shadow-lg shadow-red-500/50"></div>
             </div>
 
             <div className="space-y-3 max-h-[600px] overflow-y-auto scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
-              {recentDetections.map((detection, index) => (
-                <motion.div
-                  key={detection.id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.4 + index * 0.1 }}
-                  className="p-4 bg-white/5 rounded-xl border border-white/10 hover:border-white/20 transition-all"
-                >
-                  <div className="flex items-start justify-between mb-2">
-                    <div className={`px-2 py-1 rounded text-xs font-bold ${detection.status === 'malicious'
-                      ? 'bg-red-500/20 text-red-400 border border-red-500/30'
-                      : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
-                      }`}>
-                      {detection.status.toUpperCase()}
+              {recentDetections.length === 0 ? (
+                <p className="text-slate-400 text-sm py-8 text-center">No URL checks yet. Citizen URL checks will appear here.</p>
+              ) : (
+                recentDetections.map((detection: any, index: number) => (
+                  <motion.div
+                    key={detection.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.1 + index * 0.05 }}
+                    className="p-4 bg-white/5 rounded-xl border border-white/10 hover:border-white/20 transition-all"
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <div className={`px-2 py-1 rounded text-xs font-bold ${detection.status === 'UNSAFE'
+                        ? 'bg-red-500/20 text-red-400 border border-red-500/30'
+                        : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                        }`}>
+                        {detection.status}
+                      </div>
+                      <span className="text-xs text-slate-500">{new Date(detection.checked_at).toLocaleString()}</span>
                     </div>
-                    <span className="text-xs text-slate-500">{detection.timestamp}</span>
-                  </div>
-
-                  <div className="text-sm text-white font-medium mb-2 line-clamp-2">
-                    {detection.type === 'url' ? detection.url : detection.message}
-                  </div>
-
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-slate-400">{detection.threat}</span>
-                    <span className="text-blue-400 font-semibold">{detection.reportedBy} reports</span>
-                  </div>
-                </motion.div>
-              ))}
+                    <div className="text-sm text-white font-medium mb-2 line-clamp-2">{detection.url}</div>
+                    {(() => {
+                      try {
+                        const threats = detection.threats_json ? JSON.parse(detection.threats_json) : [];
+                        if (threats && threats.length > 0) {
+                          return (
+                            <div className="text-xs text-red-400">
+                              {threats.map((t: any) => typeof t === 'string' ? t : (t.threatType || '')).filter(Boolean).join(', ')}
+                            </div>
+                          );
+                        }
+                      } catch { }
+                      return null;
+                    })()}
+                  </motion.div>
+                ))
+              )}
             </div>
           </div>
         </motion.div>

@@ -2,7 +2,7 @@ fastapi
 uvicorn
 python-multipart
 torch
-timm
+torchvision
 facenet-pytorch
 opencv-python
 numpy

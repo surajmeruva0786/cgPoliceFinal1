@@ -8,6 +8,10 @@ export function DocumentSummarizer() {
   const [analysisResult, setAnalysisResult] = useState<any>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Get user context from localStorage
+  const userType = localStorage.getItem('user_type') || 'official';
+  const userId = parseInt(localStorage.getItem(userType === 'official' ? 'official_id' : 'citizen_id') || '1');
+
   const handleUploadClick = () => {
     fileInputRef.current?.click();
   };
@@ -24,6 +28,8 @@ export function DocumentSummarizer() {
     formData.append('file', file);
 
     try {
+      formData.append('citizen_id', String(userId));
+
       const response = await fetch('http://localhost:8000/analyze-document', {
         method: 'POST',
         body: formData,

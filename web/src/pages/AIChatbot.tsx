@@ -1,8 +1,10 @@
 import { motion } from 'motion/react';
-import { Send, Bot, User, Database, FileText, Newspaper } from 'lucide-react';
+import { Send, Bot, User, Database, FileText, Newspaper, History, Clock } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+
+const API_BASE = 'http://localhost:8000';
 
 const initialMessages = [
   {
@@ -24,7 +26,13 @@ export function AIChatbot() {
   const [messages, setMessages] = useState(initialMessages);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [sessionId, setSessionId] = useState<number | null>(null);
+  const [chatHistory, setChatHistory] = useState<any[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Get user context from localStorage
+  const userType = localStorage.getItem('user_type') || 'official';
+  const userId = parseInt(localStorage.getItem(userType === 'official' ? 'official_id' : 'citizen_id') || '1');
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -34,12 +42,36 @@ export function AIChatbot() {
     scrollToBottom();
   }, [messages, isLoading]);
 
+  // Load chat history on mount
+  useEffect(() => {
+    fetch(`${API_BASE}/chat-history/${userId}`)
+      .then(res => res.json())
+      .then(data => setChatHistory(data))
+      .catch(() => { });
+  }, [userId]);
+
+  const loadChatSession = async (historySessionId: number) => {
+    try {
+      const res = await fetch(`${API_BASE}/chat-session/${userId}/${historySessionId}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      setSessionId(historySessionId);
+      const loadedMessages = data.messages.map((m: any, idx: number) => ({
+        id: idx + 1,
+        type: m.role === 'assistant' ? 'bot' : 'user',
+        content: m.content,
+        timestamp: ''
+      }));
+      setMessages(loadedMessages);
+    } catch { }
+  };
+
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || isLoading) return;
 
     const userText = input;
-    setInput(''); // Clear input immediately
+    setInput('');
 
     const newMessage = {
       id: messages.length + 1,
@@ -52,24 +84,26 @@ export function AIChatbot() {
     setIsLoading(true);
 
     try {
-      // Convert existing messages for the API context
-      // NOTE: We only send last 10 messages to keep context window manageable if needed, or all.
       const history = messages.map(m => ({
         role: m.type === 'bot' ? 'assistant' : 'user',
         content: m.content
       }));
-      // Add the new message
       history.push({ role: 'user', content: userText });
 
-      const response = await fetch('http://localhost:8000/chat', {
+      const response = await fetch(`${API_BASE}/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: history })
+        body: JSON.stringify({
+          messages: history,
+          citizen_id: userId,
+          session_id: sessionId
+        })
       });
 
       if (!response.ok) throw new Error('Failed to get response');
 
       const data = await response.json();
+      setSessionId(data.session_id);
 
       const botResponse = {
         id: messages.length + 2,
@@ -78,6 +112,12 @@ export function AIChatbot() {
         timestamp: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
       };
       setMessages(prev => [...prev, botResponse]);
+
+      // Refresh chat history sidebar
+      fetch(`${API_BASE}/chat-history/${userId}`)
+        .then(res => res.json())
+        .then(data => setChatHistory(data))
+        .catch(() => { });
 
     } catch (error) {
       console.error("Chat Error:", error);
@@ -93,17 +133,16 @@ export function AIChatbot() {
     }
   };
 
+  const handleNewChat = () => {
+    setSessionId(null);
+    setMessages(initialMessages);
+  };
+
   const handleExampleClick = (query: string) => {
     setInput(query);
   };
 
   return (
-    /* 
-      Layout Fix: 
-      - Removed fixed height calc that was causing overflow.
-      - Used flex-col and h-full to fill available space in the parent container.
-      - Adjusted padding.
-    */
     <div className="p-6 h-[calc(100vh-8rem)] flex flex-col">
       {/* Header */}
       <div className="mb-4 flex-shrink-0">
@@ -161,7 +200,7 @@ export function AIChatbot() {
                         {message.content}
                       </ReactMarkdown>
                     </div>
-                    <div className="text-xs text-[#94A3B8] mt-1">{message.timestamp}</div>
+                    {message.timestamp && <div className="text-xs text-[#94A3B8] mt-1">{message.timestamp}</div>}
                   </div>
                 </div>
               </motion.div>
@@ -215,6 +254,42 @@ export function AIChatbot() {
           transition={{ duration: 0.5, delay: 0.2 }}
           className="space-y-4 overflow-y-auto custom-scrollbar"
         >
+          {/* New Chat Button */}
+          <button
+            onClick={handleNewChat}
+            className="w-full p-3 bg-[#2F80ED] hover:bg-[#2F80ED]/90 text-white rounded-xl text-sm font-medium transition-all duration-300"
+          >
+            + New Chat
+          </button>
+
+          {/* Chat History */}
+          {chatHistory.length > 0 && (
+            <div className="bg-[#12283A] border border-[#2F80ED]/20 rounded-xl p-4">
+              <h3 className="text-sm font-bold text-[#F1F5F9] mb-3 flex items-center gap-2">
+                <History className="w-4 h-4" />
+                Chat History
+              </h3>
+              <div className="space-y-2 max-h-[200px] overflow-y-auto">
+                {chatHistory.map((item: any) => (
+                  <button
+                    key={item.id}
+                    onClick={() => loadChatSession(item.id)}
+                    className={`w-full text-left p-2.5 rounded-lg text-xs transition-all duration-300 ${sessionId === item.id
+                      ? 'bg-[#2F80ED]/20 border border-[#2F80ED]/40 text-[#F1F5F9]'
+                      : 'bg-[#0B1C2D] hover:bg-[#0B1C2D]/70 border border-[#2F80ED]/20 hover:border-[#2F80ED] text-[#94A3B8] hover:text-[#F1F5F9]'
+                      }`}
+                  >
+                    <div className="truncate font-medium">{item.title}</div>
+                    <div className="flex items-center gap-1 text-[10px] text-[#64748B] mt-1">
+                      <Clock className="w-3 h-3" />
+                      {new Date(item.updated_at).toLocaleDateString()}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Example Queries */}
           <div className="bg-[#12283A] border border-[#2F80ED]/20 rounded-xl p-4">
             <h3 className="text-sm font-bold text-[#F1F5F9] mb-3">Example Queries</h3>
