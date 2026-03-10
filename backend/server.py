@@ -1,5 +1,8 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
+import asyncio
+import json
 import shutil
 import os
 from dotenv import load_dotenv
@@ -15,7 +18,7 @@ except ImportError as e:
     
 from document_analysis import process_document
 from news_intelligence import get_news_intel
-from chatbot import get_chat_response
+from chatbot import get_chat_response, get_chat_stream
 from url_detector import check_url_safety
 from pydantic import BaseModel
 from typing import List, Dict, Optional
@@ -222,19 +225,28 @@ async def deepfake_history(citizen_id: int, limit: int = 20):
 
 @app.post("/chat")
 async def chat_endpoint(request: ChatRequest):
-    try:
-        response = get_chat_response(request.messages)
-        
-        # Always save to user's DB — includes both user messages AND AI-generated response
-        all_messages = request.messages + [{"role": "assistant", "content": response}]
-        session_id = save_chat_session(
-            citizen_id=request.citizen_id,
-            messages=all_messages,
-            session_id=request.session_id
-        )
-        return {"response": response, "session_id": session_id}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    async def generate_response():
+        full_response = ""
+        try:
+            for chunk in get_chat_stream(request.messages):
+                full_response += chunk
+                yield f"data: {json.dumps({'content': chunk})}\n\n"
+                await asyncio.sleep(0.005) # Yield control allowing tiny flushes
+                
+            # Always save to user's DB after generation completes
+            all_messages = request.messages + [{"role": "assistant", "content": full_response}]
+            session_id = save_chat_session(
+                citizen_id=request.citizen_id,
+                messages=all_messages,
+                session_id=request.session_id
+            )
+            yield f"data: {json.dumps({'session_id': session_id})}\n\n"
+            yield "data: [DONE]\n\n"
+        except Exception as e:
+            yield f"data: {json.dumps({'error': str(e)})}\n\n"
+            yield "data: [DONE]\n\n"
+
+    return StreamingResponse(generate_response(), media_type="text/event-stream")
 
 @app.get("/chat-history/{citizen_id}")
 async def chat_history(citizen_id: int, limit: int = 20):

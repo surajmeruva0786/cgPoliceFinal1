@@ -11,7 +11,7 @@ import requests
 API_ENDPOINT = "http://127.0.0.1:8000/check-url"
 
 def test_url(url_to_test):
-    payload = {"url": url_to_test}
+    payload = {"url": url_to_test, "citizen_id": 1}
 
     try:
         response = requests.post(

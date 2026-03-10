@@ -39,9 +39,37 @@ class AIChatBot:
             print(f"Chat Error: {e}")
             return "I'm having trouble connecting to my AI brain right now. Please ensure Ollama is running."
 
+    def chat_stream(self, messages):
+        """
+        streams the response back token by token
+        """
+        if not messages or messages[0].get('role') != 'system':
+            messages.insert(0, self.system_prompt)
+        
+        try:
+            response = ollama.chat(
+                model=MODEL_NAME,
+                messages=messages,
+                stream=True,
+                options={
+                    "temperature": 0.4,
+                    "top_p": 0.9,
+                    "num_predict": 800
+                }
+            )
+            for chunk in response:
+                if 'message' in chunk and 'content' in chunk['message']:
+                    yield chunk['message']['content']
+        except Exception as e:
+            print(f"Chat Error: {e}")
+            yield "I'm having trouble connecting to my AI brain right now. Please ensure Ollama is running."
+
 # Singleton instance or create new per request?
 # For simple usage, creating new instance or just using static method is fine since state is passed in.
 chatbot = AIChatBot()
 
 def get_chat_response(messages):
     return chatbot.chat(messages)
+
+def get_chat_stream(messages):
+    return chatbot.chat_stream(messages)

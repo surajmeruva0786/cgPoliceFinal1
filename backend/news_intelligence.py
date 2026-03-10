@@ -17,7 +17,7 @@ def fetch_chhattisgarh_news():
     
     for url in rss_urls:
         try:
-            response = requests.get(url, headers=headers, timeout=10)
+            response = requests.get(url, headers=headers, timeout=5)
             soup = BeautifulSoup(response.content, 'xml')
             items = soup.find_all('item')
             
@@ -75,6 +75,7 @@ def analyze_news_intelligence(articles):
         response = ollama.chat(
             model='llama3.2:latest',
             messages=[{'role':'user', 'content': prompt}],
+            format='json',
             options={'temperature': 0.1}
         )
         content = response['message']['content'].strip()

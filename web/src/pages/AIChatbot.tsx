@@ -75,15 +75,40 @@ export function AIChatbot() {
 
       if (!response.ok) throw new Error('Failed to get response');
 
-      const data = await response.json();
-
+      const botMessageId = messages.length + 2;
       const botResponse = {
-        id: messages.length + 2,
+        id: botMessageId,
         type: 'bot',
-        content: data.response,
+        content: '',
         timestamp: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
       };
       setMessages(prev => [...prev, botResponse]);
+
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+      if (!reader) return;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split('\n');
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const dataStr = line.slice(6);
+            if (dataStr === '[DONE]') break;
+            try {
+              const data = JSON.parse(dataStr);
+              if (data.content) {
+                setMessages(prev => prev.map(m => m.id === botMessageId ? { ...m, content: m.content + data.content } : m));
+              }
+              if (data.session_id) {
+                setSessionId(data.session_id);
+              }
+            } catch (e) { }
+          }
+        }
+      }
 
 
 

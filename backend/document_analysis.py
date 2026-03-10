@@ -156,6 +156,7 @@ IMPORTANT: Return ONLY the JSON object. Do not wrap it in markdown code blocks l
         response = ollama.chat(
             model='llama3.2:latest',
             messages=[{'role':'user','content':prompt}],
+            format='json',
             options={'temperature':0.1}
         )
         
