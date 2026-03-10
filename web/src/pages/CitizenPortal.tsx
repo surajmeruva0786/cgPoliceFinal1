@@ -72,49 +72,33 @@ export function CitizenPortal() {
   const [urlResult, setUrlResult] = useState<any>(null);
   const [urlChecking, setUrlChecking] = useState(false);
 
-  // Check if already logged in
+  // Auto-authenticate for prototyping — no login needed
   useEffect(() => {
     const storedId = localStorage.getItem('citizen_id');
-    const storedName = localStorage.getItem('citizen_name');
     if (storedId) {
       setCitizenId(parseInt(storedId));
-      setCitizenName(storedName || 'Citizen');
-      setIsAuthenticated(true);
+      setCitizenName(localStorage.getItem('citizen_name') || 'Citizen');
+    } else {
+      localStorage.setItem('user_type', 'citizen');
+      localStorage.setItem('citizen_id', '1');
+      localStorage.setItem('citizen_name', 'Citizen');
+      setCitizenId(1);
+      setCitizenName('Citizen');
     }
+    setIsAuthenticated(true);
   }, []);
 
-  const handleAuth = async (e: React.FormEvent) => {
+  const handleAuth = (e: React.FormEvent) => {
     e.preventDefault();
-    setAuthLoading(true);
-    setAuthError('');
-
-    try {
-      const endpoint = isRegister ? '/auth/citizen/register' : '/auth/citizen/login';
-      const body: any = { phone: authForm.phone, password: authForm.password };
-      if (isRegister) body.name = authForm.name || 'Citizen';
-
-      const response = await fetch(`${API_BASE}${endpoint}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
-      });
-
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.detail || 'Authentication failed');
-
-      // Store auth
-      localStorage.setItem('user_type', 'citizen');
-      localStorage.setItem('citizen_id', String(data.citizen_id));
-      localStorage.setItem('citizen_name', data.name || 'Citizen');
-      setCitizenId(data.citizen_id);
-      setCitizenName(data.name || 'Citizen');
-      setIsAuthenticated(true);
-      setShowAuth(false);
-    } catch (err: any) {
-      setAuthError(err.message);
-    } finally {
-      setAuthLoading(false);
-    }
+    // Skip API — just set local state (prototyping mode)
+    const cName = authForm.name || 'Citizen';
+    localStorage.setItem('user_type', 'citizen');
+    localStorage.setItem('citizen_id', '1');
+    localStorage.setItem('citizen_name', cName);
+    setCitizenId(1);
+    setCitizenName(cName);
+    setIsAuthenticated(true);
+    setShowAuth(false);
   };
 
   const handleLogout = () => {
@@ -172,10 +156,7 @@ export function CitizenPortal() {
   };
 
   const requireAuth = (serviceId: string) => {
-    if (!isAuthenticated) {
-      setShowAuth(true);
-      return;
-    }
+    // No auth needed — prototyping mode
     setActiveService(serviceId);
   };
 

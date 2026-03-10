@@ -3,29 +3,10 @@ import { Shield, Users, AlertTriangle, Video, Link, MapPin, TrendingUp, Activity
 import { useEffect, useState } from 'react';
 
 export function CitizenMonitoring() {
-  const [stats, setStats] = useState<any>(null);
-  const [reports, setReports] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const fetchData = () => {
-    Promise.all([
-      fetch('http://localhost:8000/dashboard-stats').then(r => r.json()),
-      fetch('http://localhost:8000/fraud-reports?limit=20').then(r => r.json()),
-    ]).then(([statsData, reportsData]) => {
-      setStats(statsData);
-      setReports(reportsData);
-      setLoading(false);
-    }).catch(err => {
-      console.error('Fetch error:', err);
-      setLoading(false);
-    });
-  };
-
-  useEffect(() => {
-    fetchData();
-    const interval = setInterval(fetchData, 5000);
-    return () => clearInterval(interval);
-  }, []);
+  // Static data — no backend calls (prototyping mode)
+  const stats = { total_url_checks: 1247, today_url_checks: 34, unsafe_urls: 186, total_fraud_reports: 342, pending_reports: 47, total_deepfake_scans: 89, today_deepfake_scans: 5, deepfakes_detected: 23 };
+  const reports: any[] = [];
+  const loading = false;
 
   const citizenStats = [
     { label: 'Total URL Checks', value: stats?.total_url_checks || 0, trend: `${stats?.today_url_checks || 0} today`, icon: Link, color: 'amber' },

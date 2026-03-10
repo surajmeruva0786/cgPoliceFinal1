@@ -48,8 +48,8 @@ function MetricCard({ title, value, icon: Icon, trend, trendValue }: any) {
           </div>
           {trend && (
             <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold backdrop-blur-sm ${trend === 'up'
-                ? 'bg-red-500/10 text-red-400 border border-red-500/20'
-                : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+              ? 'bg-red-500/10 text-red-400 border border-red-500/20'
+              : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
               }`}>
               {trend === 'up' ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
               <span>{trendValue}</span>
@@ -64,36 +64,26 @@ function MetricCard({ title, value, icon: Icon, trend, trendValue }: any) {
 }
 
 export function Overview() {
-  const [stats, setStats] = useState<any>(null);
-  const [activity, setActivity] = useState<any[]>([]);
-
-  useEffect(() => {
-    // Fetch dashboard stats
-    fetch('http://localhost:8000/dashboard-stats')
-      .then(res => res.json())
-      .then(data => setStats(data))
-      .catch(err => console.error('Stats fetch error:', err));
-
-    // Fetch recent activity
-    fetch('http://localhost:8000/recent-activity?limit=10')
-      .then(res => res.json())
-      .then(data => setActivity(data))
-      .catch(err => console.error('Activity fetch error:', err));
-
-    // Poll every 5 seconds
-    const interval = setInterval(() => {
-      fetch('http://localhost:8000/dashboard-stats')
-        .then(res => res.json())
-        .then(data => setStats(data))
-        .catch(() => { });
-      fetch('http://localhost:8000/recent-activity?limit=10')
-        .then(res => res.json())
-        .then(data => setActivity(data))
-        .catch(() => { });
-    }, 5000);
-
-    return () => clearInterval(interval);
-  }, []);
+  // Static data — no backend calls (prototyping mode)
+  const stats = {
+    total_url_checks: 1247,
+    total_deepfake_scans: 89,
+    total_fraud_reports: 342,
+    total_citizens: 15420,
+    unsafe_urls: 186,
+    deepfakes_detected: 23,
+    pending_reports: 47,
+    today_url_checks: 34,
+    today_deepfake_scans: 5,
+    today_fraud_reports: 12,
+    total_alerts: 8,
+  };
+  const activity: any[] = [
+    { id: 'url_check-1', type: 'url_check', description: 'URL checked: https://suspicious-link.com', status: 'UNSAFE', timestamp: new Date().toISOString() },
+    { id: 'deepfake-1', type: 'deepfake_scan', description: 'Deepfake scan: video_call_recording.mp4', status: 'FAKE', timestamp: new Date().toISOString() },
+    { id: 'fraud-1', type: 'fraud_report', description: 'Fraud report: Digital Arrest Call', status: 'pending', timestamp: new Date().toISOString() },
+    { id: 'url_check-2', type: 'url_check', description: 'URL checked: https://safe-website.gov.in', status: 'SAFE', timestamp: new Date().toISOString() },
+  ];
 
   const getActivityIcon = (type: string) => {
     switch (type) {

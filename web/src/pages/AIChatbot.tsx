@@ -27,12 +27,8 @@ export function AIChatbot() {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [sessionId, setSessionId] = useState<number | null>(null);
-  const [chatHistory, setChatHistory] = useState<any[]>([]);
+  const chatHistory: any[] = []; // No backend fetch (prototyping mode)
   const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  // Get user context from localStorage
-  const userType = localStorage.getItem('user_type') || 'official';
-  const userId = parseInt(localStorage.getItem(userType === 'official' ? 'official_id' : 'citizen_id') || '1');
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -42,29 +38,7 @@ export function AIChatbot() {
     scrollToBottom();
   }, [messages, isLoading]);
 
-  // Load chat history on mount
-  useEffect(() => {
-    fetch(`${API_BASE}/chat-history/${userId}`)
-      .then(res => res.json())
-      .then(data => setChatHistory(data))
-      .catch(() => { });
-  }, [userId]);
 
-  const loadChatSession = async (historySessionId: number) => {
-    try {
-      const res = await fetch(`${API_BASE}/chat-session/${userId}/${historySessionId}`);
-      if (!res.ok) return;
-      const data = await res.json();
-      setSessionId(historySessionId);
-      const loadedMessages = data.messages.map((m: any, idx: number) => ({
-        id: idx + 1,
-        type: m.role === 'assistant' ? 'bot' : 'user',
-        content: m.content,
-        timestamp: ''
-      }));
-      setMessages(loadedMessages);
-    } catch { }
-  };
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -95,15 +69,13 @@ export function AIChatbot() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           messages: history,
-          citizen_id: userId,
-          session_id: sessionId
+          citizen_id: 1
         })
       });
 
       if (!response.ok) throw new Error('Failed to get response');
 
       const data = await response.json();
-      setSessionId(data.session_id);
 
       const botResponse = {
         id: messages.length + 2,
@@ -113,11 +85,7 @@ export function AIChatbot() {
       };
       setMessages(prev => [...prev, botResponse]);
 
-      // Refresh chat history sidebar
-      fetch(`${API_BASE}/chat-history/${userId}`)
-        .then(res => res.json())
-        .then(data => setChatHistory(data))
-        .catch(() => { });
+
 
     } catch (error) {
       console.error("Chat Error:", error);
@@ -273,7 +241,7 @@ export function AIChatbot() {
                 {chatHistory.map((item: any) => (
                   <button
                     key={item.id}
-                    onClick={() => loadChatSession(item.id)}
+                    onClick={() => { /* no-op in prototype mode */ }}
                     className={`w-full text-left p-2.5 rounded-lg text-xs transition-all duration-300 ${sessionId === item.id
                       ? 'bg-[#2F80ED]/20 border border-[#2F80ED]/40 text-[#F1F5F9]'
                       : 'bg-[#0B1C2D] hover:bg-[#0B1C2D]/70 border border-[#2F80ED]/20 hover:border-[#2F80ED] text-[#94A3B8] hover:text-[#F1F5F9]'

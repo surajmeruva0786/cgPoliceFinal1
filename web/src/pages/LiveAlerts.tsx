@@ -3,43 +3,27 @@ import { AlertTriangle, MapPin, Clock, Phone, Video, Plus, Send, X } from 'lucid
 import { useState, useEffect } from 'react';
 
 export function LiveAlerts() {
-  const [alerts, setAlerts] = useState<any[]>([]);
+  // Static sample alerts — no backend fetch (prototyping mode)
+  const [alerts, setAlerts] = useState<any[]>([
+    { id: 1, title: 'Fake SBI KYC Update Campaign Active', description: 'Fraudsters sending SMS asking to update KYC urgently. Multiple reports from Maharashtra.', severity: 'critical', location: 'Maharashtra', type: 'phishing', is_active: true, created_at: new Date().toISOString() },
+    { id: 2, title: 'WhatsApp Investment Scam Detected', description: 'Fake cryptocurrency investment groups targeting young professionals via WhatsApp.', severity: 'high', location: 'Pan India', type: 'scam_call', is_active: true, created_at: new Date().toISOString() },
+    { id: 3, title: 'Digital Arrest Call Wave in Mumbai', description: 'Multiple reports of impersonation calls claiming drug courier involvement.', severity: 'critical', location: 'Mumbai', type: 'scam_call', is_active: true, created_at: new Date().toISOString() },
+  ]);
   const [showForm, setShowForm] = useState(false);
   const [newAlert, setNewAlert] = useState({
     title: '', description: '', severity: 'medium', location: 'Pan India', type: 'general'
   });
   const [sending, setSending] = useState(false);
 
-  const fetchAlerts = () => {
-    fetch('http://localhost:8000/alerts?active_only=false&limit=50')
-      .then(r => r.json())
-      .then(data => setAlerts(data))
-      .catch(err => console.error('Alert fetch error:', err));
-  };
-
-  useEffect(() => {
-    fetchAlerts();
-    const interval = setInterval(fetchAlerts, 5000);
-    return () => clearInterval(interval);
-  }, []);
-
   const handleCreateAlert = async () => {
     if (!newAlert.title || !newAlert.description) return;
     setSending(true);
-    try {
-      await fetch('http://localhost:8000/alerts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newAlert),
-      });
-      setNewAlert({ title: '', description: '', severity: 'medium', location: 'Pan India', type: 'general' });
-      setShowForm(false);
-      fetchAlerts();
-    } catch (err) {
-      console.error('Create alert error:', err);
-    } finally {
-      setSending(false);
-    }
+    // Add to local state only — no backend call
+    const alert = { id: Date.now(), ...newAlert, is_active: true, created_at: new Date().toISOString() };
+    setAlerts(prev => [alert, ...prev]);
+    setNewAlert({ title: '', description: '', severity: 'medium', location: 'Pan India', type: 'general' });
+    setShowForm(false);
+    setSending(false);
   };
 
   const severityConfig: any = {

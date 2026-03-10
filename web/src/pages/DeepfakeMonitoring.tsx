@@ -6,27 +6,7 @@ export function DeepfakeMonitoring() {
   const [scans, setScans] = useState<any[]>([]);
   const [latestScan, setLatestScan] = useState<any>(null);
 
-  // Get user context from localStorage
-  const userType = localStorage.getItem('user_type') || 'official';
-  const userId = parseInt(localStorage.getItem(userType === 'official' ? 'official_id' : 'citizen_id') || '1');
-
-  useEffect(() => {
-    const fetchScans = () => {
-      fetch(`http://localhost:8000/recent-deepfake-scans/${userId}?limit=20`)
-        .then(res => res.json())
-        .then(data => {
-          setScans(data);
-          if (data.length > 0) {
-            setLatestScan(data[0]);
-          }
-        })
-        .catch(err => console.error('Deepfake scan fetch error:', err));
-    };
-
-    fetchScans();
-    const interval = setInterval(fetchScans, 3000);
-    return () => clearInterval(interval);
-  }, [userId]);
+  // No backend fetch — scans list starts empty (prototyping mode)
 
   const confidence = latestScan ? Math.round(latestScan.confidence * 100) : 50;
   const prediction = latestScan?.prediction || 'UNKNOWN';

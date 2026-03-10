@@ -7,28 +7,10 @@ export function FraudURLDetection() {
   const [analysisResult, setAnalysisResult] = useState<any>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [activeTab, setActiveTab] = useState<'url' | 'message'>('url');
-  const [recentDetections, setRecentDetections] = useState<any[]>([]);
-  const [dbStats, setDbStats] = useState<any>(null);
 
-  // Get user context from localStorage
-  const userType = localStorage.getItem('user_type') || 'official';
-  const userId = parseInt(localStorage.getItem(userType === 'official' ? 'official_id' : 'citizen_id') || '1');
-
-  useEffect(() => {
-    const fetchData = () => {
-      fetch(`http://localhost:8000/recent-url-checks/${userId}?limit=10`)
-        .then(r => r.json())
-        .then(data => setRecentDetections(data))
-        .catch(() => { });
-      fetch('http://localhost:8000/dashboard-stats')
-        .then(r => r.json())
-        .then(data => setDbStats(data))
-        .catch(() => { });
-    };
-    fetchData();
-    const interval = setInterval(fetchData, 5000);
-    return () => clearInterval(interval);
-  }, [userId]);
+  // Static data — no backend fetch calls (prototyping mode)
+  const recentDetections: any[] = [];
+  const dbStats = { total_url_checks: 1247, today_url_checks: 34, unsafe_urls: 186, total_deepfake_scans: 89, deepfakes_detected: 23, total_fraud_reports: 342, pending_reports: 47 };
 
   const stats = [
     { label: 'URLs Analyzed', value: dbStats?.total_url_checks || 0, trend: `${dbStats?.today_url_checks || 0} today` },
@@ -46,7 +28,7 @@ export function FraudURLDetection() {
       const response = await fetch('http://localhost:8000/check-url', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: inputValue, citizen_id: userId }),
+        body: JSON.stringify({ url: inputValue, citizen_id: 1 }),
       });
 
       const data = await response.json();
