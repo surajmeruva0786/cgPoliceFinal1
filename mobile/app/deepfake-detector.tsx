@@ -38,6 +38,7 @@ export default function DeepfakeDetectorScreen() {
                 name: file.name,
                 type: file.mimeType || 'video/mp4',
             } as any);
+            formData.append('citizen_id', String((global as any).citizenId || 1));
 
             const response = await fetch(`${API_BASE_URL}/detect`, {
                 method: 'POST',

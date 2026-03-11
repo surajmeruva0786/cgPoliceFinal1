@@ -70,7 +70,7 @@ export default function AssistantScreen() {
             const response = await fetch(`${API_BASE_URL}/chat`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ messages: history }),
+                body: JSON.stringify({ messages: history, citizen_id: (global as any).citizenId || 1 }),
             });
 
             if (!response.ok) throw new Error('Failed to get response');

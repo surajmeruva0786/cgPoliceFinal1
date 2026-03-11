@@ -28,7 +28,7 @@ export default function URLCheckerScreen() {
             const response = await fetch(`${API_BASE_URL}/check-url`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ url: url }),
+                body: JSON.stringify({ url: url, citizen_id: (global as any).citizenId || 1 }),
             });
 
             const data = await response.json();

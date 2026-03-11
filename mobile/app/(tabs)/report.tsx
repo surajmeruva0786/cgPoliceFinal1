@@ -49,6 +49,7 @@ export default function ReportScreen() {
                     details: details,
                     amount_lost: parseFloat(amount) || 0,
                     location: 'Mobile App',
+                    citizen_id: (global as any).citizenId || 1,
                 }),
             });
             const data = await response.json();

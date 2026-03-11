@@ -13,10 +13,7 @@ import {
 import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Shield, Phone, Lock, ChevronRight, UserPlus } from 'lucide-react-native';
-import { Colors } from '../constants/Config';
-
-const API_BASE = 'http://10.0.2.2:8000'; // Android emulator localhost
-// For physical device, use your local IP: 'http://192.168.x.x:8000'
+import { Colors, API_BASE_URL as API_BASE } from '../constants/Config';
 
 export default function LoginScreen() {
     const [phone, setPhone] = useState('');
