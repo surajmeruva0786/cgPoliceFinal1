@@ -1,7 +1,6 @@
-
 import requests
 from bs4 import BeautifulSoup
-import ollama
+from groq import Groq
 
 def fetch_chhattisgarh_news():
     # Example sources - strictly placeholders. Real-world would involve more specific scraping or API.
@@ -72,13 +71,14 @@ def analyze_news_intelligence(articles):
     """
     
     try:
-        response = ollama.chat(
-            model='llama3.2:latest',
+        client = Groq(api_key="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")
+        response = client.chat.completions.create(
+            model='llama-3.1-8b-instant',
             messages=[{'role':'user', 'content': prompt}],
-            format='json',
-            options={'temperature': 0.1}
+            response_format={"type": "json_object"},
+            temperature=0.1
         )
-        content = response['message']['content'].strip()
+        content = response.choices[0].message.content.strip()
         
         # Regex to extract JSON object
         import re

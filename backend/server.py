@@ -1,4 +1,4 @@
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import FastAPI, UploadFile, File, HTTPException, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 import asyncio
@@ -171,7 +171,7 @@ def read_root():
     return {"status": "CG Police API is running", "database": "Per-user SQLite", "auth": "enabled"}
 
 @app.post("/detect")
-async def detect_deepfake(file: UploadFile = File(...), citizen_id: int = 0):
+async def detect_deepfake(file: UploadFile = File(...), citizen_id: int = Form(0)):
     if detector is None:
         raise HTTPException(status_code=500, detail="Detector not initialized. check server logs.")
 
@@ -262,7 +262,7 @@ async def chat_session_detail(citizen_id: int, session_id: int):
 # ─── Document Analysis (per-user, stores generated content) ───────────────────
 
 @app.post("/analyze-document")
-async def analyze_document_endpoint(file: UploadFile = File(...), citizen_id: int = 0):
+async def analyze_document_endpoint(file: UploadFile = File(...), citizen_id: int = Form(0)):
     if not file.filename:
         raise HTTPException(status_code=400, detail="No file uploaded")
 

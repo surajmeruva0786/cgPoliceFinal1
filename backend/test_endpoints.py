@@ -1,9 +1,12 @@
 import requests
+import json
 
 print("Testing Chat Endpoint...")
 try:
-    resp = requests.post("http://127.0.0.1:8000/chat", json={"messages": [{"role": "user", "content": "hi"}], "citizen_id": 1}, timeout=120)
-    print("Chat:", resp.json())
+    with requests.post("http://127.0.0.1:8000/chat", json={"messages": [{"role": "user", "content": "hi"}], "citizen_id": 1}, stream=True, timeout=120) as resp:
+        for line in resp.iter_lines():
+            if line:
+                print(line.decode('utf-8'))
 except Exception as e:
     print("Chat Error:", e)
 

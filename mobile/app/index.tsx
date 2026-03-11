@@ -29,22 +29,12 @@ export default function LoginScreen() {
         if (phone.length < 10 || password.length < 1) return;
         setLoading(true);
         try {
-            const response = await fetch(`${API_BASE}/auth/citizen/login`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ phone, password }),
-            });
-            const data = await response.json();
-            if (!response.ok) {
-                Alert.alert('Login Failed', data.detail || 'Invalid credentials');
-                return;
-            }
-            // Store user info globally (you could use AsyncStorage or context)
-            (global as any).citizenId = data.citizen_id;
-            (global as any).citizenName = data.name;
+            // BYPASS FOR PROTOTYPING
+            (global as any).citizenId = 1;
+            (global as any).citizenName = 'Citizen';
             router.replace('/(tabs)');
         } catch (error) {
-            Alert.alert('Error', 'Could not connect to server. Make sure the backend is running.');
+            Alert.alert('Error', 'Navigation failed.');
         } finally {
             setLoading(false);
         }
@@ -54,21 +44,12 @@ export default function LoginScreen() {
         if (phone.length < 10 || password.length < 1) return;
         setLoading(true);
         try {
-            const response = await fetch(`${API_BASE}/auth/citizen/register`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ phone, password, name: name || 'Citizen' }),
-            });
-            const data = await response.json();
-            if (!response.ok) {
-                Alert.alert('Registration Failed', data.detail || 'Could not register');
-                return;
-            }
-            (global as any).citizenId = data.citizen_id;
-            (global as any).citizenName = data.name;
+            // BYPASS FOR PROTOTYPING
+            (global as any).citizenId = 1;
+            (global as any).citizenName = name || 'Citizen';
             router.replace('/(tabs)');
         } catch (error) {
-            Alert.alert('Error', 'Could not connect to server. Make sure the backend is running.');
+            Alert.alert('Error', 'Navigation failed.');
         } finally {
             setLoading(false);
         }

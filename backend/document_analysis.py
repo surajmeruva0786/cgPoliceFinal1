@@ -12,7 +12,7 @@ except ImportError:
     pass
 
 try:
-    import ollama
+    from groq import Groq
 except ImportError:
     pass
 
@@ -153,14 +153,15 @@ IMPORTANT: Return ONLY the JSON object. Do not wrap it in markdown code blocks l
 """
 
     try:
-        response = ollama.chat(
-            model='llama3.2:latest',
+        client = Groq(api_key="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")
+        response = client.chat.completions.create(
+            model='llama-3.1-8b-instant',
             messages=[{'role':'user','content':prompt}],
-            format='json',
-            options={'temperature':0.1}
+            response_format={"type": "json_object"},
+            temperature=0.1
         )
         
-        content = response['message']['content']
+        content = response.choices[0].message.content
 
         # Regex to extract JSON object
         import re

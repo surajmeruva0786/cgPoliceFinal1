@@ -1,7 +1,9 @@
+import os
+from groq import Groq
 
-import ollama
-
-MODEL_NAME = "llama3.2:latest"
+MODEL_NAME = "llama-3.1-8b-instant"
+GROQ_API_KEY = "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"
+client = Groq(api_key=GROQ_API_KEY)
 
 class AIChatBot:
     def __init__(self):
@@ -24,17 +26,15 @@ class AIChatBot:
             messages.insert(0, self.system_prompt)
         
         try:
-            response = ollama.chat(
+            response = client.chat.completions.create(
                 model=MODEL_NAME,
                 messages=messages,
-                stream=False, # Web API usually easier with non-streaming first
-                options={
-                    "temperature": 0.4,
-                    "top_p": 0.9,
-                    "num_predict": 800
-                }
+                stream=False,
+                temperature=0.4,
+                top_p=0.9,
+                max_completion_tokens=800
             )
-            return response['message']['content']
+            return response.choices[0].message.content
         except Exception as e:
             print(f"Chat Error: {e}")
             return "I'm having trouble connecting to my AI brain right now. Please ensure Ollama is running."
@@ -47,22 +47,20 @@ class AIChatBot:
             messages.insert(0, self.system_prompt)
         
         try:
-            response = ollama.chat(
+            response = client.chat.completions.create(
                 model=MODEL_NAME,
                 messages=messages,
                 stream=True,
-                options={
-                    "temperature": 0.4,
-                    "top_p": 0.9,
-                    "num_predict": 800
-                }
+                temperature=0.4,
+                top_p=0.9,
+                max_completion_tokens=800
             )
             for chunk in response:
-                if 'message' in chunk and 'content' in chunk['message']:
-                    yield chunk['message']['content']
+                if chunk.choices[0].delta.content is not None:
+                    yield chunk.choices[0].delta.content
         except Exception as e:
             print(f"Chat Error: {e}")
-            yield "I'm having trouble connecting to my AI brain right now. Please ensure Ollama is running."
+            yield "I'm having trouble connecting to my AI brain right now. Please ensure Groq API is functioning."
 
 # Singleton instance or create new per request?
 # For simple usage, creating new instance or just using static method is fine since state is passed in.
