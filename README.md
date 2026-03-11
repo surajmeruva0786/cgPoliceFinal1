@@ -34,15 +34,15 @@ The platform is composed of three main components:
 
 | Component | Description |
 |-----------|-------------|
-| **Backend** | Python/FastAPI server powering all AI & intelligence modules |
-| **Web Dashboard** | React-based admin dashboard & citizen portal |
+| **Backend** | Python/FastAPI server powering all AI & intelligence modules, User Auth, Data Persistence & Integrations |
+| **Web Dashboard** | React-based admin dashboard & citizen portal frontend |
 | **Mobile App** | Expo/React Native companion app for on-the-go access |
 
 ---
 
 ## Architecture
 
-```
+```text
 ┌──────────────────────────────────────────────────────────────┐
 │                        CLIENTS                               │
 │  ┌────────────────┐  ┌──────────────┐  ┌──────────────────┐  │
@@ -53,35 +53,45 @@ The platform is composed of three main components:
            │                  │                   │
            ▼                  ▼                   ▼
 ┌──────────────────────────────────────────────────────────────┐
-│                    FastAPI Backend (:8000)                    │
+│                    FastAPI Backend (:8000)                   │
 │                                                              │
 │  ┌──────────────┐  ┌──────────────┐  ┌────────────────────┐  │
-│  │  Deepfake    │  │  URL Safety  │  │  Document Analysis │  │
-│  │  Detector    │  │  Checker     │  │  (OCR + LLM)       │  │
+│  │ User Auth &  │  │ Deepfake     │  │  URL Safety        │  │
+│  │ Local SQLite │  │ Detector     │  │  Checker           │  │
 │  └──────────────┘  └──────────────┘  └────────────────────┘  │
-│  ┌──────────────┐  ┌──────────────┐                          │
-│  │  News Intel  │  │  AI Chatbot  │                          │
-│  │  (RSS + LLM) │  │  (Ollama)    │                          │
-│  └──────────────┘  └──────────────┘                          │
-└──────────────────────────────────────────────────────────────┘
-           │                  │                   │
-           ▼                  ▼                   ▼
-┌──────────────────────────────────────────────────────────────┐
-│                    EXTERNAL SERVICES                         │
-│  • Google Safe Browsing API   • Ollama (LLaMA 3.2)           │
-│  • Indian News RSS Feeds      • Tesseract OCR                │
-└──────────────────────────────────────────────────────────────┘
+│  ┌──────────────┐  ┌──────────────┐  ┌────────────────────┐  │
+│  │ News Intel   │  │ AI Chatbot   │  │ Document Analysis  │  │
+│  │ (RSS + LLM)  │  │ (Ollama)     │  │ (OCR + LLM)        │  │
+│  └──────────────┘  └──────────────┘  └────────────────────┘  │
+└────────────┬──────────────────────────────────┬──────────────┘
+             │                                  │
+             ▼                                  ▼
+┌────────────────────────────────┐  ┌──────────────────────────┐
+│        EXTERNAL SERVICES       │  │     INTEGRATIONS         │
+│  • Google Safe Browsing API    │  │  • Google Sheets API     │
+│  • Ollama (LLaMA 3.2)          │  │    (via Webhook)         │
+│  • Indian News RSS Feeds       │  │                          │
+│  • Tesseract OCR               │  │                          │
+└────────────────────────────────┘  └──────────────────────────┘
 ```
 
 ---
 
 ## Features
 
+### 🔐 Authentication & Data Persistence
+- **Role-Based Access Control**: Separate login portals for Officials and Citizens.
+- **Local Database**: Uses SQLite for fast, local storage of user schemas, historical data, and chat sessions.
+- **Per-User History**: Users can view their past analyzed documents, chat bot histories, deepfake scans, and checked URLs.
+
+### 🔗 Real-Time Intelligence & Sheets Sync
+- **Automated Data Aggregation**: Suspicious URLs, Deepfake incidents, and Fraud Reports are pushed dynamically to a centralized **Google Sheet** via a Webhook Integration.
+- Provides investigating officers a master spreadsheet pipeline for cybercrime correlation.
+
 ### 🎭 Deepfake Video Detection
 - Detects AI-generated/manipulated videos using an **ensemble of EfficientNet-B7** models
 - Face detection via **MTCNN** (Multi-task Cascaded Convolutional Networks)
 - GPU-accelerated inference with FP16 support for real-time analysis
-- Confident strategy aggregation across multiple sampled frames
 - Returns prediction (`REAL` / `FAKE`) with confidence score
 
 ### 🔗 Fraudulent URL Detection
@@ -142,6 +152,7 @@ The platform is composed of three main components:
 |------------|---------|
 | **Python 3.10+** | Runtime |
 | **FastAPI** | REST API framework |
+| **SQLite** | Local Database & Auth Storage |
 | **Uvicorn** | ASGI server |
 | **PyTorch** | Deep learning inference |
 | **timm** | EfficientNet-B7 model architecture |
@@ -150,7 +161,7 @@ The platform is composed of three main components:
 | **Tesseract / pytesseract** | OCR text extraction |
 | **Ollama** | Local LLM inference (LLaMA 3.2) |
 | **BeautifulSoup / lxml** | RSS feed & HTML parsing |
-| **Requests** | HTTP client for APIs |
+| **Google Apps Script**| Receiver webhook for Sheets Integration |
 
 ### Web Frontend
 | Technology | Purpose |
@@ -165,7 +176,6 @@ The platform is composed of three main components:
 | **Recharts** | Data visualization / charts |
 | **Framer Motion** | Animations |
 | **Sonner** | Toast notifications |
-| **React Markdown** | Markdown rendering for chatbot |
 
 ### Mobile App
 | Technology | Purpose |
@@ -175,26 +185,26 @@ The platform is composed of three main components:
 | **Expo Router** | File-based navigation |
 | **React Native Reanimated** | Smooth animations |
 | **React Native WebView** | Embedded web content |
-| **Lucide React Native** | Icon library |
 
 ---
 
 ## Project Structure
 
-```
+```text
 cgPoliceFinal1/
-├── .env                          # Environment variables (API keys)
+├── .env                          # Environment variables (API keys, Webhooks)
 ├── README.md                     # This file
 │
 ├── backend/                      # Python FastAPI backend
 │   ├── server.py                 # Main API server & route definitions
+│   ├── database.py               # SQLite initialization, auth & history schemas
+│   ├── sheets_integration.py     # Google Sheets async push webhook handler
 │   ├── deepfake_detector.py      # EfficientNet-B7 deepfake detection engine
 │   ├── document_analysis.py      # OCR + keyword extraction + LLM analysis
 │   ├── url_detector.py           # Google Safe Browsing API integration
 │   ├── news_intelligence.py      # RSS news aggregation + LLM analysis
 │   ├── chatbot.py                # AI chatbot (Ollama / LLaMA 3.2)
 │   ├── requirements.txt          # Python dependencies
-│   ├── test_url_detector.py      # URL detector tests
 │   ├── weights/                  # Model weight files (EfficientNet-B7)
 │   └── uploads/                  # Temporary file upload directory
 │
@@ -204,45 +214,16 @@ cgPoliceFinal1/
 │   ├── package.json              # Node.js dependencies
 │   └── src/
 │       ├── App.tsx               # Root application component
-│       ├── main.tsx              # Entry point
 │       ├── routes.ts             # Route definitions (admin + citizen)
-│       ├── index.css             # Global styles
-│       ├── components/           # Reusable UI components
-│       │   ├── DashboardLayout.tsx
-│       │   ├── CitizenPortalLayout.tsx
-│       │   └── ui/               # Radix-based design system (48 components)
-│       └── pages/                # Page-level components
-│           ├── LoginPage.tsx
-│           ├── Overview.tsx
-│           ├── DeepfakeMonitoring.tsx
-│           ├── FraudURLDetection.tsx
-│           ├── DocumentSummarizer.tsx
-│           ├── NewspaperIntelligence.tsx
-│           ├── AIChatbot.tsx
-│           ├── CriminalIntelligence.tsx
-│           ├── CitizenMonitoring.tsx
-│           ├── IdentityVerification.tsx
-│           ├── LiveAlerts.tsx
-│           └── citizen/          # Citizen-facing portal pages
-│               ├── CitizenDashboard.tsx
-│               ├── CitizenURLChecker.tsx
-│               ├── CitizenDeepfakeDetector.tsx
-│               ├── CitizenIdentityVerifier.tsx
-│               ├── CitizenReportFraud.tsx
-│               ├── CitizenProtectionTips.tsx
-│               ├── CitizenLiveAlerts.tsx
-│               ├── CitizenAIAssistant.tsx
-│               └── CitizenLoginPage.tsx
+│       ├── components/           # Reusable UI components & Radix primitives
+│       └── pages/                # Admin & Citizen pages (Dashboard, AI Tools)
 │
 └── mobile/                       # Expo React Native mobile app
-    ├── App.js                    # Fallback entry point
-    ├── app.json                  # Expo configuration
     ├── package.json              # Node.js dependencies
-    ├── index.js                  # Entry point
+    ├── app.json                  # Expo configuration
     └── app/                      # Expo Router file-based routing
         ├── _layout.tsx           # Root layout with theme support
-        └── (tabs)/
-            └── _layout.tsx       # Tab-based navigation layout
+        └── (tabs)/               # Tab navigation system
 ```
 
 ---
@@ -258,7 +239,6 @@ cgPoliceFinal1/
 | **npm** | 9+ | Package management |
 | **Ollama** | Latest | Local LLM server for AI features |
 | **Tesseract OCR** | Latest | Document text extraction |
-| **CUDA** *(optional)* | 11.8+ | GPU-accelerated deepfake detection |
 
 ### Backend Setup
 
@@ -279,6 +259,7 @@ pip install -r requirements.txt
 # 4. Set up environment variables
 #    Create a .env file in the project root with:
 #    GOOGLE_SAFE_BROWSING_API_KEY=your_api_key_here
+#    GOOGLE_SHEETS_WEBHOOK_URL=your_apps_script_url_here
 
 # 5. Install and start Ollama (required for chatbot & analysis)
 #    Download from https://ollama.com
@@ -286,7 +267,6 @@ ollama pull llama3.2
 
 # 6. (Optional) Add deepfake model weights
 #    Place EfficientNet-B7 weight files in backend/weights/
-#    Files should contain "tf_efficientnet_b7_ns" in the filename
 
 # 7. Start the backend server
 python server.py
@@ -319,34 +299,8 @@ npm install
 # 3. Start the Expo development server
 npx expo start
 
-# 4. Run on your device
-#    - Scan the QR code with Expo Go (Android/iOS)
-#    - Press 'a' for Android emulator
-#    - Press 'i' for iOS simulator
+# 4. Run on your device (Press 'a' for Android, 'i' for iOS)
 ```
-
----
-
-## API Reference
-
-| Method | Endpoint | Description | Body |
-|--------|----------|-------------|------|
-| `GET` | `/` | Health check | — |
-| `POST` | `/detect` | Analyze video for deepfakes | `multipart/form-data` (file) |
-| `POST` | `/check-url` | Check URL safety | `{"url": "https://..."}` |
-| `POST` | `/analyze-document` | OCR + intelligence analysis | `multipart/form-data` (file) |
-| `GET` | `/news-intel` | Fetch & analyze news intelligence | — |
-| `POST` | `/chat` | AI chatbot conversation | `{"messages": [{"role": "user", "content": "..."}]}` |
-
----
-
-## Portals
-
-### 🔐 Admin Dashboard (`/dashboard`)
-For authorized police personnel. Provides full access to all detection modules, intelligence dashboards, monitoring panels, and the AI chatbot. Designed for command-center use.
-
-### 🌐 Citizen Portal (`/citizen`)
-Public-facing portal for citizens. Provides self-service tools to check suspicious URLs, upload deepfake videos for analysis, verify official identities, report fraud, view active alerts, and chat with the AI assistant. Focused on accessibility and ease of use.
 
 ---
 
@@ -355,4 +309,3 @@ Public-facing portal for citizens. Provides self-service tools to check suspicio
   <br />
   <em>Empowering law enforcement with AI-driven cybercrime detection</em>
 </p>
-<h1>DONE</h1>
