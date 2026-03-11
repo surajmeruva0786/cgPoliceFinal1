@@ -188,7 +188,20 @@ def process_document(file_path):
     related_articles = search_related_articles(keywords)
     common_terms = extract_common_terms(related_articles)
     analysis = analyze_for_investigation(extracted_text, related_articles, common_terms)
-    
+    try:
+        from sheets_integration import push_to_sheets_async
+        if isinstance(analysis, dict) and "key_entities" in analysis:
+            push_to_sheets_async(
+                source="Document Analysis (AI)",
+                entities=", ".join(analysis.get("key_entities", [])),
+                locations="N/A",
+                keywords=", ".join(analysis.get("clues", []) + keywords),
+                risk_level=analysis.get("risk_level", "Unknown"),
+                summary=analysis.get("summary", "No summary")
+            )
+    except Exception as e:
+        print(f"Error triggering sheets sync: {e}")
+        
     return {
         "text": extracted_text,
         "keywords": keywords,

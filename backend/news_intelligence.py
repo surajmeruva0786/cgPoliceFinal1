@@ -99,6 +99,20 @@ def analyze_news_intelligence(articles):
 def get_news_intel():
     articles = fetch_chhattisgarh_news()
     analysis = analyze_news_intelligence(articles)
+    try:
+        from sheets_integration import push_to_sheets_async
+        if isinstance(analysis, dict):
+            push_to_sheets_async(
+                source="News Intelligence (AI)",
+                entities="N/A",
+                locations="Chhattisgarh",
+                keywords=", ".join(analysis.get("trends", [])),
+                risk_level="N/A",
+                summary=analysis.get("summary", "No summary")
+            )
+    except Exception as e:
+        print(f"Error triggering sheets sync: {e}")
+        
     return {
         "articles": articles,
         "analysis": analysis

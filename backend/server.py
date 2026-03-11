@@ -149,6 +149,21 @@ async def api_check_url(request: URLCheckRequest):
         threats=threats,
         citizen_id=request.citizen_id
     )
+    
+    try:
+        if result.get("status") == "UNSAFE":
+            from sheets_integration import push_to_sheets_async
+            push_to_sheets_async(
+                source="Fraud URL Scanner",
+                entities=request.url,
+                locations="Cyber",
+                keywords=", ".join([t.get("threatType", "") for t in threats]),
+                risk_level="High",
+                summary=f"Malicious URL requested by User ID: {request.citizen_id}"
+            )
+    except Exception as e:
+        print(f"Error triggering sheets sync: {e}")
+        
     return result
 
 @app.get("/url-history/{citizen_id}")
@@ -198,6 +213,20 @@ async def detect_deepfake(file: UploadFile = File(...), citizen_id: int = Form(0
             confidence=result["confidence"],
             citizen_id=citizen_id
         )
+        
+        try:
+            if result["prediction"] == "FAKE":
+                from sheets_integration import push_to_sheets_async
+                push_to_sheets_async(
+                    source="Deepfake Scanner",
+                    entities=file.filename,
+                    locations="N/A",
+                    keywords="Deepfake, Impersonation",
+                    risk_level=f"{result['confidence']*100:.1f}% Confidence",
+                    summary=f"Fake Audio/Video scanned by Citizen ID {citizen_id}"
+                )
+        except Exception as e:
+            print(f"Error triggering sheets sync: {e}")
         
         return {
             "filename": file.filename,
@@ -349,6 +378,20 @@ async def report_fraud(request: FraudReportRequest):
         location=request.location,
         citizen_id=request.citizen_id
     )
+    
+    try:
+        from sheets_integration import push_to_sheets_async
+        push_to_sheets_async(
+            source="Citizen Fraud Report",
+            entities=request.contact_info,
+            locations=request.location,
+            keywords=request.fraud_type,
+            risk_level=f"₹{request.amount_lost}",
+            summary=request.details
+        )
+    except Exception as e:
+        print(f"Error triggering sheets sync: {e}")
+        
     return {
         "success": True,
         "report_id": report_id,
