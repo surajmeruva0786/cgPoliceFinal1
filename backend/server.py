@@ -86,6 +86,7 @@ class ChatRequest(BaseModel):
     messages: List[Dict[str, str]]
     citizen_id: int
     session_id: Optional[int] = None
+    stream: bool = True
 
 class FraudReportRequest(BaseModel):
     fraud_type: str
@@ -225,6 +226,22 @@ async def deepfake_history(citizen_id: int, limit: int = 20):
 
 @app.post("/chat")
 async def chat_endpoint(request: ChatRequest):
+    if not request.stream:
+        full_response = ""
+        try:
+            for chunk in get_chat_stream(request.messages):
+                full_response += chunk
+            
+            all_messages = request.messages + [{"role": "assistant", "content": full_response}]
+            session_id = save_chat_session(
+                citizen_id=request.citizen_id,
+                messages=all_messages,
+                session_id=request.session_id
+            )
+            return {"response": full_response, "session_id": session_id}
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
     async def generate_response():
         full_response = ""
         try:
