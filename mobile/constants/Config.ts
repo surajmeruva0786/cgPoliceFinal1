@@ -1,6 +1,6 @@
 // Change this to your computer's local network IP when testing on physical device via Expo Go
 // e.g., 'http://192.168.1.5:8000'
-export const API_BASE_URL = 'http://172.16.196.44:8000';
+export const API_BASE_URL = 'http://172.16.197.50:8000';
 
 export const Colors = {
     // Base
