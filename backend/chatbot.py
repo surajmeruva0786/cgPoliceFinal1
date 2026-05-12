@@ -2,7 +2,7 @@ import os
 from groq import Groq
 
 MODEL_NAME = "llama-3.1-8b-instant"
-GROQ_API_KEY = "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"
+GROQ_API_KEY = "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"
 client = Groq(api_key=GROQ_API_KEY)
 
 class AIChatBot:

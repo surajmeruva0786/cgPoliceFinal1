@@ -153,7 +153,7 @@ IMPORTANT: Return ONLY the JSON object. Do not wrap it in markdown code blocks l
 """
 
     try:
-        client = Groq(api_key="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")
+        client = Groq(api_key="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")
         response = client.chat.completions.create(
             model='llama-3.1-8b-instant',
             messages=[{'role':'user','content':prompt}],

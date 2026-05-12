@@ -1,6 +1,28 @@
-// Change this to your computer's local network IP when testing on physical device via Expo Go
-// e.g., 'http://192.168.1.5:8000'
-export const API_BASE_URL = 'http://172.16.197.50:8000';
+// API base URL configuration
+// ─── IMPORTANT: Set your machine's LAN IP below ───────────────────────────
+// Run `ipconfig` (Windows) or `ifconfig` (Mac/Linux) and copy your IPv4 address.
+const LAN_IP = '192.168.0.160'; // <-- Your PC's LAN IP (backend runs here)
+
+// Set IS_EMULATOR = true if you are running on an Android EMULATOR (not a real phone).
+// Android emulators use the special alias 10.0.2.2 to reach the host machine.
+// Physical Android phones and all iOS devices must use the actual LAN IP above.
+const IS_EMULATOR = false; // <-- change to true only when using Android emulator
+
+import { Platform } from 'react-native';
+
+const getApiBaseUrl = (): string => {
+  if (process.env.REACT_NATIVE_API_BASE_URL) {
+    return process.env.REACT_NATIVE_API_BASE_URL;
+  }
+  if (Platform.OS === 'android' && IS_EMULATOR) {
+    // Android emulator special loopback to host
+    return 'http://10.0.2.2:8000';
+  }
+  // Physical Android device OR iOS — must use the real LAN IP
+  return `http://${LAN_IP}:8000`;
+};
+
+export const API_BASE_URL = getApiBaseUrl();
 
 export const Colors = {
     // Base
